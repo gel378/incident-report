@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Incident Report Generator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f3f4f6;color:#111;min-height:100vh}
+/* Nav */
+nav{background:#fff;border-bottom:1px solid #e5e7eb;padding:0 24px;display:flex;align-items:center;gap:0;height:52px}
+.nav-brand{font-size:15px;font-weight:700;color:#4f46e5;margin-right:28px}
+.nav-tab{padding:0 14px;height:52px;display:flex;align-items:center;font-size:13px;font-weight:500;color:#6b7280;cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.nav-tab.active{color:#4f46e5;border-bottom-color:#4f46e5}
+/* Pages */
+.page{display:none;padding:24px;max-width:1200px;margin:0 auto}
+.page.active{display:block}
+h1{font-size:20px;font-weight:700;margin-bottom:4px}
+.sub{color:#6b7280;font-size:13px;margin-bottom:20px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:20px;margin-bottom:16px}
+.card-title{font-size:12px;font-weight:600;color:#6b7280;letter-spacing:.05em;text-transform:uppercase;margin-bottom:14px}
+/* Upload */
+.drop{border:2px dashed #d1d5db;border-radius:8px;padding:32px 20px;text-align:center;cursor:pointer;transition:.2s}
+.drop:hover,.drop.over{border-color:#4f46e5;background:#eef2ff}
+.drop p{font-size:14px;color:#6b7280}.drop p b{color:#4f46e5}
+.drop input{display:none}
+.fname{font-size:13px;color:#4f46e5;margin-top:6px;font-weight:500}
+/* Controls */
+.row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.field label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px}
+input[type=date],input[type=text],select{padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;color:#111;background:#fff}
+input[type=text]{width:100%}
+/* Stats */
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.stat{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:10px 16px;min-width:90px;text-align:center}
+.stat .n{font-size:24px;font-weight:700;color:#4f46e5}
+.stat .l{font-size:11px;color:#6b7280;margin-top:2px}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;border:1px solid transparent;cursor:pointer;font-size:13px;font-weight:500;transition:.15s}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:#4f46e5;color:#fff;border-color:#4f46e5}.btn-primary:hover:not(:disabled){background:#4338ca}
+.btn-ghost{background:#fff;color:#374151;border-color:#d1d5db}.btn-ghost:hover:not(:disabled){background:#f9fafb}
+.btn-danger{background:#fff;color:#dc2626;border-color:#fca5a5}.btn-danger:hover:not(:disabled){background:#fee2e2}
+.btn-success{background:#fff;color:#059669;border-color:#6ee7b7}.btn-success:hover:not(:disabled){background:#ecfdf5}
+.btn-sm{padding:4px 10px;font-size:12px}
+/* Tabs */
+.tab-bar{display:flex;gap:0;border-bottom:1px solid #e5e7eb;margin-bottom:16px;overflow-x:auto}
+.tab{padding:8px 14px;font-size:12px;font-weight:600;color:#6b7280;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tab.active{color:#4f46e5;border-bottom-color:#4f46e5}
+.tab-pane{display:none}.tab-pane.active{display:block}
+/* Table */
+.tbl-wrap{overflow:auto;max-height:420px;border:1px solid #e5e7eb;border-radius:6px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f9fafb;padding:7px 10px;text-align:left;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;position:sticky;top:0;z-index:1;cursor:pointer;user-select:none}
+th:hover{background:#f0f0f0}
+th .sort-icon{margin-left:4px;color:#9ca3af}
+td{padding:6px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+td.num{text-align:center}
+td input,td select{padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;width:100%;background:#fff}
+/* Filter row */
+.filter-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.filter-row input,.filter-row select{padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;color:#111}
+/* Badge */
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600}
+.b-system{background:#fef3c7;color:#92400e}
+.b-ops{background:#dbeafe;color:#1d4ed8}
+.b-pe{background:#d1fae5;color:#065f46}
+/* Tracking config table */
+.ref-table td{white-space:normal}
+.ref-table td input{min-width:80px}
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:#1f2937;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;display:none;z-index:99}
+.empty{text-align:center;padding:40px;color:#9ca3af;font-size:13px}
+.spinner{display:none;width:16px;height:16px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">📋 Incident Report</div>
+  <div class="nav-tab active" data-page="page-report">Report Generator</div>
+  <div class="nav-tab" data-page="page-tracking">Tracking Config</div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════ REPORT PAGE -->
+<div class="page active" id="page-report">
+  <h1 style="margin-top:8px">Incident Report Generator</h1>
+  <p class="sub">Upload the weekly CSV or XLSX export — all tabs build automatically.</p>
+
+  <div class="card">
+    <div class="card-title">Step 1 · Upload File</div>
+    <div class="drop" id="drop">
+      <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+      <p style="font-size:28px;margin-bottom:8px">📂</p>
+      <p><b>Click to browse</b> or drag &amp; drop your CSV / XLSX</p>
+      <div class="fname" id="fname"></div>
+    </div>
+  </div>
+
+  <div class="card" id="stepConfig" style="display:none">
+    <div class="card-title">Step 2 · Configure</div>
+    <div class="row">
+      <div class="field">
+        <label>Date From</label>
+        <input type="date" id="dateFrom">
+      </div>
+      <div class="field">
+        <label>Date To</label>
+        <input type="date" id="dateTo">
+      </div>
+      <button class="btn btn-primary" id="previewBtn" disabled>
+        <div class="spinner" id="spin1"></div>
+        <span id="previewLabel">Build Preview</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="card" id="stepPreview" style="display:none">
+    <div class="card-title">Step 3 · Preview</div>
+    <div class="stats" id="stats"></div>
+    <div class="tab-bar" id="tabBar"></div>
+    <div id="tabPanes"></div>
+  </div>
+
+  <div class="card" id="stepExport" style="display:none">
+    <div class="card-title">Step 4 · Export</div>
+    <div class="row">
+      <button class="btn btn-primary" id="exportBtn">
+        <div class="spinner" id="spin2"></div>
+        <span id="exportLabel">⬇ Download XLSX</span>
+      </button>
+      <span style="font-size:12px;color:#6b7280">Generates all 5 tabs: Acupick · Ops Issues · Summary · Acupick Incident Categories · INC</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ TRACKING CONFIG PAGE -->
+<div class="page" id="page-tracking">
+  <h1 style="margin-top:8px">Tracking Reference</h1>
+  <p class="sub">Define tracking codes, their CI, type, and category label. These drive auto-detection from Resolution Notes.</p>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="card-title" style="margin:0">Tracking Codes</div>
+      <button class="btn btn-primary btn-sm" id="addRowBtn">+ Add Row</button>
+    </div>
+    <div class="filter-row" style="margin-bottom:12px">
+      <input type="text" id="refSearch" placeholder="Search code or category…" style="width:200px">
+      <select id="refTypeFilter"><option value="">All Types</option>${TYPES_LIST.map(t=>`<option>${t}</option>`).join('')}</select>
+      <select id="refCiFilter"><option value="">All CIs</option></select>
+      <button class="btn btn-ghost btn-sm" id="refClearBtn">Clear</button>
+      <span id="refCount" style="font-size:11px;color:#9ca3af;margin-left:4px"></span>
+    </div>
+    <div class="tbl-wrap">
+      <table class="ref-table" id="refTable">
+        <thead><tr id="refHead">
+          <th data-col="type" onclick="sortRef('type')" style="cursor:pointer">Type <span class="sort-icon">⇅</span></th>
+          <th data-col="ci" onclick="sortRef('ci')" style="cursor:pointer">Configuration Item <span class="sort-icon">⇅</span></th>
+          <th data-col="tracking_code" onclick="sortRef('tracking_code')" style="cursor:pointer">Tracking Code <span class="sort-icon">⇅</span></th>
+          <th data-col="category" onclick="sortRef('category')" style="cursor:pointer">Category <span class="sort-icon">⇅</span></th>
+          <th style="width:110px">Actions</th>
+        </tr></thead>
+        <tbody id="refBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '';
+const DIVS = ['Denver','Haggen','Intermountain','Jewel-Osco','MidAtlantic','NorCal','Portland','Seattle','Shaws','SoCal','Southern','Southwest','United'];
+const TYPES_LIST = ['SYSTEM','OPS','PE'];
+
+let uploadedFile = null, previewData = null, trackingMap = {};
+let incRows = [], incSort = {col: null, asc: true}, incFilter = {text: '', type: '', tracking: ''}, incRowsSnapshot = [];
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-tab').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById(el.dataset.page).classList.add('active');
+    if (el.dataset.page === 'page-tracking') loadTracking();
+  });
+});
+
+// ── Drop zone ─────────────────────────────────────────────────────────────────
+const drop = document.getElementById('drop');
+const fi   = document.getElementById('fileInput');
+drop.addEventListener('click', () => fi.click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); setFile(e.dataTransfer.files[0]); });
+fi.addEventListener('change', e => setFile(e.target.files[0]));
+
+function setFile(f) {
+  if (!f || !f.name.match(/\.(csv|xlsx|xls)$/i)) { toast('Please upload a .csv or .xlsx file', true); return; }
+  uploadedFile = f;
+  document.getElementById('fname').textContent = f.name;
+  document.getElementById('stepConfig').style.display = 'block';
+  document.getElementById('previewBtn').disabled = false;
+  if (!document.getElementById('dateFrom').value) {
+    const today = new Date().toISOString().split('T')[0];
+    const weekAgo = new Date(Date.now() - 6*86400000).toISOString().split('T')[0];
+    document.getElementById('dateFrom').value = weekAgo;
+    document.getElementById('dateTo').value   = today;
+  }
+}
+
+// ── Preview ───────────────────────────────────────────────────────────────────
+document.getElementById('previewBtn').addEventListener('click', async () => {
+  if (!uploadedFile) return;
+  setLoading('spin1','previewLabel',true,'Building…');
+  const fd = new FormData();
+  fd.append('file', uploadedFile);
+  fd.append('date_from', document.getElementById('dateFrom').value);
+  fd.append('date_to',   document.getElementById('dateTo').value);
+  try {
+    const res = await fetch(`${API}/api/preview`, {method:'POST',body:fd});
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch { throw new Error(text.slice(0, 300)); }
+    if (!res.ok) throw new Error(data.detail || res.statusText);
+    previewData = data;
+    trackingMap = previewData.tracking_map || {};
+    incRows = previewData.inc || [];
+    renderPreview(previewData);
+    document.getElementById('stepPreview').style.display = 'block';
+    document.getElementById('stepExport').style.display  = 'block';
+    toast('Preview ready!');
+  } catch(e) { toast('Error: '+e.message, true); }
+  finally { setLoading('spin1','previewLabel',false,'Rebuild Preview'); }
+});
+
+// ── Export ────────────────────────────────────────────────────────────────────
+document.getElementById('exportBtn').addEventListener('click', async () => {
+  if (!uploadedFile) return;
+  setLoading('spin2','exportLabel',true,'Generating…');
+  const fd = new FormData();
+  fd.append('file', uploadedFile);
+  fd.append('date_from', document.getElementById('dateFrom').value);
+  fd.append('date_to',   document.getElementById('dateTo').value);
+  try {
+    const res = await fetch(`${API}/api/export`, {method:'POST',body:fd});
+    if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `incident_report_${document.getElementById('dateFrom').value}_to_${document.getElementById('dateTo').value}.xlsx`;
+    a.click();
+    toast('Downloaded!');
+  } catch(e) { toast('Export error: '+e.message, true); }
+  finally { setLoading('spin2','exportLabel',false,'⬇ Download XLSX'); }
+});
+
+// ── Render preview ────────────────────────────────────────────────────────────
+function renderPreview(d) {
+  const s = d.stats;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="n">${s.total}</div><div class="l">Total</div></div>
+    <div class="stat"><div class="n">${s.system}</div><div class="l">SYSTEM</div></div>
+    <div class="stat"><div class="n">${s.ops}</div><div class="l">OPS</div></div>
+    <div class="stat"><div class="n">${s.pe}</div><div class="l">PE</div></div>`;
+
+  const tabs = [
+    {label:'INC', key:'inc'},
+    {label:'Acupick Incident Categories', key:'categories'},
+    {label:'Ops Issues', key:'ops_issues'},
+    {label:'Summary', key:'summary'},
+  ];
+  const bar   = document.getElementById('tabBar');
+  const panes = document.getElementById('tabPanes');
+  bar.innerHTML   = tabs.map((t,i) => `<div class="tab${i===0?' active':''}" data-i="${i}">${t.label}</div>`).join('');
+  panes.innerHTML = tabs.map((t,i) => `<div class="tab-pane${i===0?' active':''}" id="pane${i}"></div>`).join('');
+  bar.querySelectorAll('.tab').forEach(el => {
+    el.addEventListener('click', () => {
+      bar.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      panes.querySelectorAll('.tab-pane').forEach(t=>t.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById('pane'+el.dataset.i).classList.add('active');
+    });
+  });
+
+  renderINCTab();
+  renderCatTable(d.categories, 'pane1');
+  renderOpsTable(d.ops_issues, 'pane2');
+  renderSummary(d.summary,     'pane3');
+}
+
+// ── INC tab with sort, filter, editable CI & Tracking ────────────────────────
+const INC_COLS = ['Type','Priority','Number','Short description','Configuration Item','State','Caller','Division','Tracking','Date Opened'];
+let incEditMode = false;
+
+function renderINCTab() {
+  const pane = document.getElementById('pane0');
+  const trackingCodes = Object.keys(trackingMap);
+
+  pane.innerHTML = `
+    <div class="filter-row">
+      <input type="text" id="incSearch" placeholder="Search any column…" style="width:220px">
+      <select id="incTypeFilter"><option value="">All Types</option>${TYPES_LIST.map(t=>`<option>${t}</option>`).join('')}</select>
+      <select id="incTrackFilter"><option value="">All Tracking</option>${trackingCodes.map(c=>`<option>${c}</option>`).join('')}</select>
+      <button class="btn btn-ghost btn-sm" id="incClearBtn">Clear</button>
+      <span id="incCount" style="font-size:11px;color:#9ca3af;margin-left:4px"></span>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" id="incEditBtn">✏ Edit</button>
+        <button class="btn btn-primary btn-sm" id="incSaveBtn" style="display:none">💾 Save</button>
+        <button class="btn btn-ghost btn-sm" id="incCancelBtn" style="display:none">✕ Cancel</button>
+      </div>
+    </div>
+    <div class="tbl-wrap" id="incTblWrap">
+      <table id="incTable">
+        <thead><tr id="incHead"></tr></thead>
+        <tbody id="incBody"></tbody>
+      </table>
+    </div>`;
+
+  const head = document.getElementById('incHead');
+  INC_COLS.forEach(col => {
+    const th = document.createElement('th');
+    th.innerHTML = `${col} <span class="sort-icon">⇅</span>`;
+    th.addEventListener('click', () => sortINC(col));
+    head.appendChild(th);
+  });
+
+  renderINCRows();
+
+  document.getElementById('incSearch').addEventListener('input', e => { incFilter.text = e.target.value; renderINCRows(); });
+  document.getElementById('incTypeFilter').addEventListener('change', e => { incFilter.type = e.target.value; renderINCRows(); });
+  document.getElementById('incTrackFilter').addEventListener('change', e => { incFilter.tracking = e.target.value; renderINCRows(); });
+  document.getElementById('incClearBtn').addEventListener('click', () => {
+    incFilter = {text:'',type:'',tracking:''};
+    document.getElementById('incSearch').value = '';
+    document.getElementById('incTypeFilter').value = '';
+    document.getElementById('incTrackFilter').value = '';
+    renderINCRows();
+  });
+  document.getElementById('incEditBtn').addEventListener('click', () => {
+    incRowsSnapshot = JSON.parse(JSON.stringify(incRows)); // snapshot for cancel
+    incEditMode = true;
+    document.getElementById('incEditBtn').style.display = 'none';
+    document.getElementById('incSaveBtn').style.display = 'inline-flex';
+    document.getElementById('incCancelBtn').style.display = 'inline-flex';
+    renderINCRows();
+  });
+  document.getElementById('incSaveBtn').addEventListener('click', () => {
+    // Flush any open selects back to incRows
+    document.querySelectorAll('#incBody tr').forEach(tr => {
+      const idx = parseInt(tr.dataset.idx);
+      if (isNaN(idx)) return;
+      const typeSel = tr.querySelector('.edit-type');
+      const ciSel   = tr.querySelector('.edit-ci');
+      const trSel   = tr.querySelector('.edit-tracking');
+      if (typeSel) incRows[idx]['Type']                 = typeSel.value;
+      if (ciSel)   incRows[idx]['Configuration Item']   = ciSel.value;
+      if (trSel) {
+        incRows[idx]['Tracking'] = trSel.value;
+        if (trSel.value && trackingMap[trSel.value])
+          incRows[idx]['Type'] = trackingMap[trSel.value].type;
+      }
+    });
+    incEditMode = false;
+    document.getElementById('incEditBtn').style.display = 'inline-flex';
+    document.getElementById('incSaveBtn').style.display = 'none';
+    document.getElementById('incCancelBtn').style.display = 'none';
+    renderINCRows();
+    toast('Changes saved — will apply on next export');
+  });
+  document.getElementById('incCancelBtn').addEventListener('click', () => {
+    incRows = JSON.parse(JSON.stringify(incRowsSnapshot)); // restore snapshot
+    incEditMode = false;
+    document.getElementById('incEditBtn').style.display = 'inline-flex';
+    document.getElementById('incSaveBtn').style.display = 'none';
+    document.getElementById('incCancelBtn').style.display = 'none';
+    renderINCRows();
+  });
+}
+
+function sortINC(col) {
+  if (incSort.col === col) incSort.asc = !incSort.asc;
+  else { incSort.col = col; incSort.asc = true; }
+  renderINCRows();
+}
+
+function getFilteredSorted() {
+  let rows = incRows.map((r, i) => ({...r, _idx: i}));
+  const {text, type, tracking} = incFilter;
+  if (type)     rows = rows.filter(r => r['Type'] === type);
+  if (tracking) rows = rows.filter(r => r['Tracking'] === tracking);
+  if (text) {
+    const lo = text.toLowerCase();
+    rows = rows.filter(r => INC_COLS.some(c => String(r[c]||'').toLowerCase().includes(lo)));
+  }
+  if (incSort.col) {
+    rows.sort((a,b) => {
+      const av = String(a[incSort.col]||''), bv = String(b[incSort.col]||'');
+      return incSort.asc ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
+  }
+  return rows;
+}
+
+function renderINCRows() {
+  const rows = getFilteredSorted();
+  const tbody = document.getElementById('incBody');
+  if (!tbody) return;
+  document.getElementById('incCount').textContent = `${rows.length} rows`;
+
+  const ciList = [...new Set(Object.values(trackingMap).map(r => r.ci))];
+  const trackingCodes = Object.keys(trackingMap);
+
+  tbody.innerHTML = rows.map(r => {
+    const idx = r._idx;
+    const typeBadge = `<span class="badge b-${(r['Type']||'ops').toLowerCase()}">${r['Type']||''}</span>`;
+    const cells = INC_COLS.map(col => {
+      if (col === 'Type') {
+        if (incEditMode) {
+          return `<td><select class="edit-type" style="min-width:90px;font-size:12px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px">
+            ${TYPES_LIST.map(t => `<option ${r[col]===t?'selected':''}>${t}</option>`).join('')}
+          </select></td>`;
+        }
+        return `<td>${typeBadge}</td>`;
+      }
+      if (incEditMode && col === 'Configuration Item') {
+        const opts = ciList.map(c => `<option ${r[col]===c?'selected':''}>${esc(c)}</option>`).join('');
+        return `<td><select class="edit-ci" style="min-width:160px;font-size:12px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px">${opts}</select></td>`;
+      }
+      if (incEditMode && col === 'Tracking') {
+        const opts = `<option value="">-- none --</option>` + trackingCodes.map(c => `<option ${r[col]===c?'selected':''}>${esc(c)}</option>`).join('');
+        return `<td><select class="edit-tracking" style="min-width:100px;font-size:12px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px">${opts}</select></td>`;
+      }
+      return `<td>${esc(r[col]||'')}</td>`;
+    });
+    return `<tr data-idx="${idx}">${cells.join('')}</tr>`;
+  }).join('') || `<tr><td colspan="${INC_COLS.length}" class="empty">No rows match</td></tr>`;
+
+  document.querySelectorAll('#incHead th').forEach((th, i) => {
+    const icon = th.querySelector('.sort-icon');
+    if (!icon) return;
+    icon.textContent = incSort.col === INC_COLS[i] ? (incSort.asc ? '↑' : '↓') : '⇅';
+  });
+}
+
+// ── Category / Acupick tables ─────────────────────────────────────────────────
+function renderCatTable(rows, paneId) {
+  if (!rows.length) { document.getElementById(paneId).innerHTML = empty('No tracking codes detected'); return; }
+  document.getElementById(paneId).innerHTML = `
+    <div class="tbl-wrap"><table>
+      <tr><th>Code</th><th>Category</th>${DIVS.map(d=>`<th>${d}</th>`).join('')}<th>Total</th></tr>
+      ${rows.map(r=>`<tr>
+        <td><b>${esc(r.Code)}</b></td><td>${esc(r.Category)}</td>
+        ${DIVS.map(d=>`<td class="num">${r[d]||0}</td>`).join('')}
+        <td class="num"><b>${r.Total}</b></td>
+      </tr>`).join('')}
+    </table></div>`;
+}
+
+function renderOpsTable(rows, paneId) {
+  if (!rows.length) { document.getElementById(paneId).innerHTML = empty('No Ops incidents found'); return; }
+  document.getElementById(paneId).innerHTML = `
+    <div class="tbl-wrap"><table>
+      <tr><th>Code</th><th>Category</th>${DIVS.map(d=>`<th>${d}</th>`).join('')}<th>Total</th></tr>
+      ${rows.map(r=>`<tr>
+        <td><b>${esc(r.Code)}</b></td><td>${esc(r.Category)}</td>
+        ${DIVS.map(d=>`<td style="white-space:pre;font-size:11px">${esc(r[d]||'0')}</td>`).join('')}
+        <td class="num"><b>${r.Total}</b></td>
+      </tr>`).join('')}
+    </table></div>`;
+}
+
+function renderSummary(s, paneId) {
+  const TYPES_ALL = [...TYPES_LIST, 'Total'];
+  const totalRows = s.totals.map(r => `<tr>
+    <td>${esc(r['Configuration Item'])}</td>
+    ${TYPES_LIST.map(t => `<td class="num">${r[t]}</td>`).join('')}
+    <td class="num"><b>${r['Total']}</b></td>
+  </tr>`).join('');
+
+  const dailyBlocks = (s.daily || []).map(d => `
+    <div style="margin-top:18px">
+      <div style="font-size:12px;font-weight:600;color:#4f46e5;margin-bottom:6px">${d.date}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <tr><th style="text-align:left;padding:5px 8px;background:#f9fafb;border-bottom:1px solid #e5e7eb">Configuration Item</th>
+          ${TYPES_LIST.map(t=>`<th style="padding:5px 8px;background:#f9fafb;border-bottom:1px solid #e5e7eb;text-align:center">${t}</th>`).join('')}
+        </tr>
+        ${d.data.map(r=>`<tr>
+          <td style="padding:5px 8px;border-bottom:1px solid #f3f4f6">${esc(r['Configuration Item'])}</td>
+          ${TYPES_LIST.map(t=>`<td style="padding:5px 8px;border-bottom:1px solid #f3f4f6;text-align:center">${r[t]}</td>`).join('')}
+        </tr>`).join('')}
+      </table>
+    </div>`).join('');
+
+  document.getElementById(paneId).innerHTML = `
+    <div style="font-size:13px;margin-bottom:12px">
+      Report period: <b>${s.date_from}</b> to <b>${s.date_to}</b>
+    </div>
+    <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">Weekly Totals</div>
+    <div class="tbl-wrap">
+      <table>
+        <tr>
+          <th>Configuration Item</th>
+          ${TYPES_ALL.map(t=>`<th>${t}</th>`).join('')}
+        </tr>
+        ${totalRows}
+      </table>
+    </div>
+    ${dailyBlocks}`;
+}
+
+// ── Tracking Config page ──────────────────────────────────────────────────────
+let allTrackingRows = [];
+let refSort = {col: null, asc: true};
+let refFilter = {text: '', type: '', ci: ''};
+
+async function syncTrackingMap() {
+  try {
+    const res = await fetch(`${API}/api/tracking`);
+    allTrackingRows = await res.json();
+    // Rebuild trackingMap from latest DB
+    trackingMap = {};
+    allTrackingRows.forEach(r => { trackingMap[r.tracking_code] = r; });
+    populateRefFilters();
+    renderRefTable(getFilteredSortedRef());
+    // If INC tab is rendered, refresh its dropdowns
+    if (incRows.length) renderINCRows();
+  } catch(e) { toast('Failed to sync tracking data', true); }
+}
+
+function populateRefFilters() {
+  const ciSet = [...new Set(allTrackingRows.map(r => r.ci))].sort();
+  const ciSel = document.getElementById('refCiFilter');
+  const cur = ciSel ? ciSel.value : '';
+  if (ciSel) {
+    ciSel.innerHTML = '<option value="">All CIs</option>' + ciSet.map(c => `<option ${cur===c?'selected':''}>${esc(c)}</option>`).join('');
+  }
+}
+
+function getFilteredSortedRef() {
+  let rows = [...allTrackingRows];
+  const {text, type, ci} = refFilter;
+  if (type) rows = rows.filter(r => r.type === type);
+  if (ci)   rows = rows.filter(r => r.ci === ci);
+  if (text) {
+    const lo = text.toLowerCase();
+    rows = rows.filter(r =>
+      r.tracking_code.toLowerCase().includes(lo) ||
+      r.category.toLowerCase().includes(lo) ||
+      r.ci.toLowerCase().includes(lo)
+    );
+  }
+  if (refSort.col) {
+    rows.sort((a, b) => {
+      const av = String(a[refSort.col]||'').toLowerCase();
+      const bv = String(b[refSort.col]||'').toLowerCase();
+      return refSort.asc ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
+  }
+  return rows;
+}
+
+function sortRef(col) {
+  if (refSort.col === col) refSort.asc = !refSort.asc;
+  else { refSort.col = col; refSort.asc = true; }
+  renderRefTable(getFilteredSortedRef());
+  // update sort icons
+  document.querySelectorAll('#refHead th[data-col]').forEach(th => {
+    const icon = th.querySelector('.sort-icon');
+    if (!icon) return;
+    icon.textContent = refSort.col === th.dataset.col ? (refSort.asc ? '↑' : '↓') : '⇅';
+  });
+}
+
+function renderRefTable(rows) {
+  const countEl = document.getElementById('refCount');
+  if (countEl) countEl.textContent = `${rows.length} rows`;
+
+  const tbody = document.getElementById('refBody');
+  tbody.innerHTML = rows.map(r => `
+    <tr data-id="${r.id}">
+      <td><span class="badge b-${r.type.toLowerCase()}">${r.type}</span></td>
+      <td style="max-width:220px;white-space:normal">${esc(r.ci)}</td>
+      <td><b>${esc(r.tracking_code)}</b></td>
+      <td style="max-width:260px;white-space:normal">${esc(r.category)}</td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="editRefRow(${r.id}, this)">✏ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRefRow(${r.id})">🗑</button>
+      </td>
+    </tr>`).join('') || `<tr><td colspan="5" class="empty">No matching rows</td></tr>`;
+}
+
+function getCiOptions(selected='') {
+  const ciList = [...new Set(allTrackingRows.map(r => r.ci))].sort();
+  const opts = ciList.map(c => `<option ${selected===c?'selected':''}>${esc(c)}</option>`).join('');
+  return `<option value="">-- select CI --</option>${opts}<option value="__custom__">+ Custom...</option>`;
+}
+
+function editRefRow(id, btn) {
+  const tr = btn.closest('tr');
+  const cells = tr.querySelectorAll('td');
+  const curType = cells[0].textContent.trim();
+  const curCI   = cells[1].textContent.trim();
+  const curCode = cells[2].textContent.trim();
+  const curCat  = cells[3].textContent.trim();
+
+  cells[0].innerHTML = `<select class="ref-type-sel" style="width:90px">
+    <option ${curType==='SYSTEM'?'selected':''}>SYSTEM</option>
+    <option ${curType==='OPS'?'selected':''}>OPS</option>
+    <option ${curType==='PE'?'selected':''}>PE</option>
+  </select>`;
+  cells[1].innerHTML = `<select class="ref-ci-sel" style="min-width:160px;font-size:12px">
+    ${getCiOptions(curCI)}
+  </select>
+  <input type="text" class="ref-ci-custom" placeholder="Custom CI..." style="display:none;margin-top:4px;width:100%">`;
+  cells[2].innerHTML = `<input type="text" class="ref-code-inp" value="${esc(curCode)}">`;
+  cells[3].innerHTML = `<input type="text" class="ref-cat-inp" value="${esc(curCat)}">`;
+  cells[4].innerHTML = `
+    <button class="btn btn-success btn-sm" onclick="saveRefRow(${id}, this)">💾 Save</button>
+    <button class="btn btn-ghost btn-sm" onclick="loadTracking()">✕</button>`;
+
+  // toggle custom input
+  cells[1].querySelector('.ref-ci-sel').addEventListener('change', function() {
+    const customInp = cells[1].querySelector('.ref-ci-custom');
+    customInp.style.display = this.value === '__custom__' ? 'block' : 'none';
+  });
+}
+
+// alias so nav tab click still works
+function loadTracking() { syncTrackingMap(); }
+
+async function saveRefRow(id, btn) {
+  const tr    = btn.closest('tr');
+  const cells = tr.querySelectorAll('td');
+
+  const typeSel    = cells[0].querySelector('select');
+  const ciSel      = cells[1].querySelector('.ref-ci-sel');
+  const ciCustom   = cells[1].querySelector('.ref-ci-custom');
+  const codeInp    = cells[2].querySelector('input');
+  const catInp     = cells[3].querySelector('input');
+
+  const ciVal = ciSel
+    ? (ciSel.value === '__custom__' ? ciCustom?.value.trim() : ciSel.value)
+    : cells[1].querySelector('input')?.value.trim();
+
+  const body = {
+    id,
+    type:          typeSel?.value || 'SYSTEM',
+    ci:            ciVal || '',
+    tracking_code: codeInp?.value.trim() || '',
+    category:      catInp?.value.trim()  || '',
+  };
+  if (!body.tracking_code || !body.ci || !body.category) { toast('All fields required', true); return; }
+  try {
+    const res = await fetch(`${API}/api/tracking`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if (!res.ok) throw new Error((await res.json()).detail);
+    toast('Saved!');
+    syncTrackingMap();
+  } catch(e) { toast('Save failed: '+e.message, true); }
+}
+
+async function deleteRefRow(id) {
+  if (!confirm('Delete this tracking code?')) return;
+  await fetch(`${API}/api/tracking/${id}`, {method:'DELETE'});
+  allTrackingRows = allTrackingRows.filter(r => r.id !== id);
+  // remove from trackingMap too
+  Object.keys(trackingMap).forEach(k => { if (trackingMap[k].id === id) delete trackingMap[k]; });
+  populateRefFilters();
+  renderRefTable(getFilteredSortedRef());
+  if (incRows.length) renderINCRows();
+  toast('Deleted');
+}
+
+document.getElementById('addRowBtn').addEventListener('click', () => {
+  const tbody = document.getElementById('refBody');
+  const tr = document.createElement('tr');
+  tr.setAttribute('data-id', '');
+  const ciList = [...new Set(allTrackingRows.map(r => r.ci))].sort();
+  tr.innerHTML = `
+    <td><select class="ref-type-sel" style="width:90px"><option>SYSTEM</option><option>OPS</option><option>PE</option></select></td>
+    <td>
+      <select class="ref-ci-sel" style="min-width:160px;font-size:12px">
+        <option value="">-- select CI --</option>
+        ${ciList.map(c=>`<option>${esc(c)}</option>`).join('')}
+        <option value="__custom__">+ Custom...</option>
+      </select>
+      <input type="text" class="ref-ci-custom" placeholder="Custom CI..." style="display:none;margin-top:4px;width:100%">
+    </td>
+    <td><input type="text" class="ref-code-inp" placeholder="APOP001"></td>
+    <td><input type="text" class="ref-cat-inp" placeholder="Category label"></td>
+    <td>
+      <button class="btn btn-success btn-sm" onclick="saveRefRow(null, this)">💾 Save</button>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove()">✕</button>
+    </td>`;
+  tbody.prepend(tr);
+  tr.querySelector('.ref-ci-sel').addEventListener('change', function() {
+    tr.querySelector('.ref-ci-custom').style.display = this.value === '__custom__' ? 'block' : 'none';
+  });
+});
+
+document.getElementById('refSearch').addEventListener('input', e => {
+  refFilter.text = e.target.value;
+  renderRefTable(getFilteredSortedRef());
+});
+document.getElementById('refTypeFilter').addEventListener('change', e => {
+  refFilter.type = e.target.value;
+  renderRefTable(getFilteredSortedRef());
+});
+document.getElementById('refCiFilter').addEventListener('change', e => {
+  refFilter.ci = e.target.value;
+  renderRefTable(getFilteredSortedRef());
+});
+document.getElementById('refClearBtn').addEventListener('click', () => {
+  refFilter = {text:'', type:'', ci:''};
+  document.getElementById('refSearch').value = '';
+  document.getElementById('refTypeFilter').value = '';
+  document.getElementById('refCiFilter').value = '';
+  renderRefTable(getFilteredSortedRef());
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function empty(msg='No data') { return `<div class="empty">${msg}</div>`; }
+function toast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = err ? '#dc2626' : '#1f2937';
+  t.style.display = 'block';
+  clearTimeout(t._to);
+  t._to = setTimeout(() => t.style.display='none', 3000);
+}
+function setLoading(spinId, labelId, on, label) {
+  document.getElementById(spinId).style.display = on ? 'block' : 'none';
+  document.getElementById(labelId).textContent  = label;
+}
+</script>
+</body>
+</html>
