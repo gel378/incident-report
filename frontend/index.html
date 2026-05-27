@@ -4,73 +4,67 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Incident Report Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,sans-serif;background:#f3f4f6;color:#111;min-height:100vh}
-/* Nav */
-nav{background:#fff;border-bottom:1px solid #e5e7eb;padding:0 24px;display:flex;align-items:center;gap:0;height:52px}
+nav{background:#fff;border-bottom:1px solid #e5e7eb;padding:0 24px;display:flex;align-items:center;height:52px}
 .nav-brand{font-size:15px;font-weight:700;color:#4f46e5;margin-right:28px}
-.nav-tab{padding:0 14px;height:52px;display:flex;align-items:center;font-size:13px;font-weight:500;color:#6b7280;cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.nav-tab{padding:0 14px;height:52px;display:flex;align-items:center;font-size:13px;font-weight:500;color:#6b7280;cursor:pointer;border-bottom:2px solid transparent}
 .nav-tab.active{color:#4f46e5;border-bottom-color:#4f46e5}
-/* Pages */
-.page{display:none;padding:24px;max-width:1200px;margin:0 auto}
+.page{display:none;padding:24px;max-width:1600px;margin:0 auto}
 .page.active{display:block}
 h1{font-size:20px;font-weight:700;margin-bottom:4px}
 .sub{color:#6b7280;font-size:13px;margin-bottom:20px}
 .card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:20px;margin-bottom:16px}
 .card-title{font-size:12px;font-weight:600;color:#6b7280;letter-spacing:.05em;text-transform:uppercase;margin-bottom:14px}
-/* Upload */
 .drop{border:2px dashed #d1d5db;border-radius:8px;padding:32px 20px;text-align:center;cursor:pointer;transition:.2s}
 .drop:hover,.drop.over{border-color:#4f46e5;background:#eef2ff}
 .drop p{font-size:14px;color:#6b7280}.drop p b{color:#4f46e5}
 .drop input{display:none}
 .fname{font-size:13px;color:#4f46e5;margin-top:6px;font-weight:500}
-/* Controls */
 .row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
 .field label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px}
 input[type=date],input[type=text],select{padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;color:#111;background:#fff}
-input[type=text]{width:100%}
-/* Stats */
 .stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
 .stat{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:10px 16px;min-width:90px;text-align:center}
 .stat .n{font-size:24px;font-weight:700;color:#4f46e5}
 .stat .l{font-size:11px;color:#6b7280;margin-top:2px}
-/* Buttons */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;border:1px solid transparent;cursor:pointer;font-size:13px;font-weight:500;transition:.15s}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 .btn-primary{background:#4f46e5;color:#fff;border-color:#4f46e5}.btn-primary:hover:not(:disabled){background:#4338ca}
 .btn-ghost{background:#fff;color:#374151;border-color:#d1d5db}.btn-ghost:hover:not(:disabled){background:#f9fafb}
 .btn-danger{background:#fff;color:#dc2626;border-color:#fca5a5}.btn-danger:hover:not(:disabled){background:#fee2e2}
 .btn-success{background:#fff;color:#059669;border-color:#6ee7b7}.btn-success:hover:not(:disabled){background:#ecfdf5}
+.btn-vpos{background:#0891b2;color:#fff;border-color:#0891b2}.btn-vpos:hover:not(:disabled){background:#0e7490}
 .btn-sm{padding:4px 10px;font-size:12px}
-/* Tabs */
+/* Main report tabs (Acupick / VPOS) */
+.report-tabs{display:flex;gap:0;border-bottom:2px solid #e5e7eb;margin-bottom:16px}
+.report-tab{padding:10px 24px;font-size:14px;font-weight:600;color:#6b7280;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+.report-tab.active{color:#4f46e5;border-bottom-color:#4f46e5}
+.report-tab.vpos-tab.active{color:#0891b2;border-bottom-color:#0891b2}
+.report-pane{display:none}.report-pane.active{display:block}
+/* Sub tabs */
 .tab-bar{display:flex;gap:0;border-bottom:1px solid #e5e7eb;margin-bottom:16px;overflow-x:auto}
 .tab{padding:8px 14px;font-size:12px;font-weight:600;color:#6b7280;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
 .tab.active{color:#4f46e5;border-bottom-color:#4f46e5}
 .tab-pane{display:none}.tab-pane.active{display:block}
-/* Table */
 .tbl-wrap{overflow:auto;max-height:420px;border:1px solid #e5e7eb;border-radius:6px}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{background:#f9fafb;padding:7px 10px;text-align:left;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;position:sticky;top:0;z-index:1;cursor:pointer;user-select:none}
-th:hover{background:#f0f0f0}
 th .sort-icon{margin-left:4px;color:#9ca3af}
 td{padding:6px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#fafafa}
 td.num{text-align:center}
 td input,td select{padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;width:100%;background:#fff}
-/* Filter row */
-.filter-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
-.filter-row input,.filter-row select{padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;color:#111}
-/* Badge */
+.filter-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.filter-row input,.filter-row select{padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px}
 .badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600}
 .b-system{background:#fef3c7;color:#92400e}
 .b-ops{background:#dbeafe;color:#1d4ed8}
 .b-pe{background:#d1fae5;color:#065f46}
-/* Tracking config table */
 .ref-table td{white-space:normal}
-.ref-table td input{min-width:80px}
-/* Toast */
 .toast{position:fixed;bottom:24px;right:24px;background:#1f2937;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;display:none;z-index:99}
 .empty{text-align:center;padding:40px;color:#9ca3af;font-size:13px}
 .spinner{display:none;width:16px;height:16px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
@@ -78,39 +72,35 @@ td input,td select{padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;fo
 </style>
 </head>
 <body>
-
 <nav>
   <div class="nav-brand">📋 Incident Report</div>
   <div class="nav-tab active" data-page="page-report">Report Generator</div>
   <div class="nav-tab" data-page="page-tracking">Tracking Config</div>
 </nav>
 
-<!-- ═══════════════════════════════════════════════════════ REPORT PAGE -->
+<!-- ═══════════════════════════ REPORT PAGE ═══════════════════════════ -->
 <div class="page active" id="page-report">
   <h1 style="margin-top:8px">Incident Report Generator</h1>
-  <p class="sub">Upload the weekly CSV or XLSX export — all tabs build automatically.</p>
+  <p class="sub">Upload the weekly CSV or XLSX export.</p>
 
+  <!-- Step 1 -->
   <div class="card">
     <div class="card-title">Step 1 · Upload File</div>
     <div class="drop" id="drop">
-      <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
       <p style="font-size:28px;margin-bottom:8px">📂</p>
-      <p><b>Click to browse</b> or drag &amp; drop your CSV / XLSX</p>
+      <p>Drag &amp; drop your CSV / XLSX here, or</p>
+      <button type="button" class="btn btn-primary" style="margin-top:10px" onclick="document.getElementById('fileInput').click()">Browse File</button>
       <div class="fname" id="fname"></div>
     </div>
+    <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none">
   </div>
 
+  <!-- Step 2 -->
   <div class="card" id="stepConfig" style="display:none">
     <div class="card-title">Step 2 · Configure</div>
     <div class="row">
-      <div class="field">
-        <label>Date From</label>
-        <input type="date" id="dateFrom">
-      </div>
-      <div class="field">
-        <label>Date To</label>
-        <input type="date" id="dateTo">
-      </div>
+      <div class="field"><label>Date From</label><input type="date" id="dateFrom"></div>
+      <div class="field"><label>Date To</label><input type="date" id="dateTo"></div>
       <button class="btn btn-primary" id="previewBtn" disabled>
         <div class="spinner" id="spin1"></div>
         <span id="previewLabel">Build Preview</span>
@@ -118,30 +108,49 @@ td input,td select{padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;fo
     </div>
   </div>
 
+  <!-- Step 3 -->
   <div class="card" id="stepPreview" style="display:none">
     <div class="card-title">Step 3 · Preview</div>
     <div class="stats" id="stats"></div>
-    <div class="tab-bar" id="tabBar"></div>
-    <div id="tabPanes"></div>
+    <!-- Acupick / VPOS top tabs -->
+    <div class="report-tabs">
+      <div class="report-tab active" data-rp="rp-acupick">🛒 Acupick</div>
+      <div class="report-tab vpos-tab" data-rp="rp-vpos">🧾 VPOS</div>
+    </div>
+
+    <!-- Acupick pane -->
+    <div class="report-pane active" id="rp-acupick">
+      <div class="tab-bar" id="acuTabBar"></div>
+      <div id="acuTabPanes"></div>
+    </div>
+
+    <!-- VPOS pane -->
+    <div class="report-pane" id="rp-vpos">
+      <div class="tab-bar" id="vposTabBar"></div>
+      <div id="vposTabPanes"></div>
+    </div>
   </div>
 
+  <!-- Step 4 -->
   <div class="card" id="stepExport" style="display:none">
     <div class="card-title">Step 4 · Export</div>
     <div class="row">
-      <button class="btn btn-primary" id="exportBtn">
-        <div class="spinner" id="spin2"></div>
-        <span id="exportLabel">⬇ Download XLSX</span>
+      <button class="btn btn-primary" id="exportAcupickBtn">
+        <div class="spinner" id="spinA"></div>
+        <span id="exportAcupickLabel">⬇ Export Acupick XLSX</span>
       </button>
-      <span style="font-size:12px;color:#6b7280">Generates all 5 tabs: Acupick · Ops Issues · Summary · Acupick Incident Categories · INC</span>
+      <button class="btn btn-vpos" id="exportVposBtn">
+        <div class="spinner" id="spinV"></div>
+        <span id="exportVposLabel">⬇ Export VPOS XLSX</span>
+      </button>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════ TRACKING CONFIG PAGE -->
+<!-- ═══════════════════════════ TRACKING PAGE ═══════════════════════════ -->
 <div class="page" id="page-tracking">
   <h1 style="margin-top:8px">Tracking Reference</h1>
-  <p class="sub">Define tracking codes, their CI, type, and category label. These drive auto-detection from Resolution Notes.</p>
-
+  <p class="sub">Define tracking codes, their CI, type, and category label.</p>
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div class="card-title" style="margin:0">Tracking Codes</div>
@@ -149,19 +158,19 @@ td input,td select{padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;fo
     </div>
     <div class="filter-row" style="margin-bottom:12px">
       <input type="text" id="refSearch" placeholder="Search code or category…" style="width:200px">
-      <select id="refTypeFilter"><option value="">All Types</option>${TYPES_LIST.map(t=>`<option>${t}</option>`).join('')}</select>
+      <select id="refTypeFilter"><option value="">All Types</option><option>SYSTEM</option><option>OPS</option><option>PE</option></select>
       <select id="refCiFilter"><option value="">All CIs</option></select>
       <button class="btn btn-ghost btn-sm" id="refClearBtn">Clear</button>
       <span id="refCount" style="font-size:11px;color:#9ca3af;margin-left:4px"></span>
     </div>
     <div class="tbl-wrap">
-      <table class="ref-table" id="refTable">
+      <table class="ref-table">
         <thead><tr id="refHead">
-          <th data-col="type" onclick="sortRef('type')" style="cursor:pointer">Type <span class="sort-icon">⇅</span></th>
-          <th data-col="ci" onclick="sortRef('ci')" style="cursor:pointer">Configuration Item <span class="sort-icon">⇅</span></th>
-          <th data-col="tracking_code" onclick="sortRef('tracking_code')" style="cursor:pointer">Tracking Code <span class="sort-icon">⇅</span></th>
-          <th data-col="category" onclick="sortRef('category')" style="cursor:pointer">Category <span class="sort-icon">⇅</span></th>
-          <th style="width:110px">Actions</th>
+          <th data-col="type" onclick="sortRef('type')">Type <span class="sort-icon">⇅</span></th>
+          <th data-col="ci" onclick="sortRef('ci')">Configuration Item <span class="sort-icon">⇅</span></th>
+          <th data-col="tracking_code" onclick="sortRef('tracking_code')">Tracking Code <span class="sort-icon">⇅</span></th>
+          <th data-col="category" onclick="sortRef('category')">Category <span class="sort-icon">⇅</span></th>
+          <th style="width:150px">Actions</th>
         </tr></thead>
         <tbody id="refBody"></tbody>
       </table>
@@ -175,568 +184,701 @@ td input,td select{padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;fo
 const API = '';
 const DIVS = ['Denver','Haggen','Intermountain','Jewel-Osco','MidAtlantic','NorCal','Portland','Seattle','Shaws','SoCal','Southern','Southwest','United'];
 const TYPES_LIST = ['SYSTEM','OPS','PE'];
+const VPOS_CI = 'VPOS - Virtual Point of Sale System (OSVP)';
+const CI_LIST_SUMMARY = [
+  'Online Shopping Fulfillment (OSFL)',
+  'VPOS - Virtual Point of Sale System (OSVP)',
+  'PPD - Personal Picking Device',
+  'Lexmark MS610de',
+  'Zebra GK420T',
+  'Online Shopping Payment Dashboard and Refunds (OSDB)',
+  'Descartes Route Planner (OSRP)',
+  'Online Shopping Micro Services (OSMS)',
+  'eCom Picking Mgmt. System (OSPK)',
+  'eCommerce Order Mgmt. System (for Micro Fulfillment Center) (OSCO)',
+  'Online Shopping Payment Gateway (OSPG)',
+  'eCom Online Shopping Last Mile (OSLM)',
+  'Online Shopping Demand Planning (OSDP)',
+  'Omni Channel Snap and EBT Payments (OCSE)',
+  'Online Shopping Store Locator (OSSL)',
+  'Online Shopping Made To Order (OSMO)',
+  'eCom Customer Order - Control Tower (OSCT)',
+];
+const TYPE_SECTION_LABELS = {OPS:'Operations Issue', SYSTEM:'System Issue', PE:'Product Enhancement'};
 
 let uploadedFile = null, previewData = null, trackingMap = {};
-let incRows = [], incSort = {col: null, asc: true}, incFilter = {text: '', type: '', tracking: ''}, incRowsSnapshot = [];
+// incRows is the shared source of truth for ALL incidents
+let incRows = [], incRowsSnapshot = [];
+let acuSort={col:null,asc:true}, acuFilter={text:'',type:'',tracking:''}, acuEditMode=false;
+let vposSort={col:null,asc:true}, vposFilter={text:'',type:'',tracking:''}, vposEditMode=false;
+let allTrackingRows=[], refSort={col:null,asc:true}, refFilter={text:'',type:'',ci:''};
 
-// ── Navigation ────────────────────────────────────────────────────────────────
-document.querySelectorAll('.nav-tab').forEach(el => {
-  el.addEventListener('click', () => {
-    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+// ── Nav ───────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-tab').forEach(el=>{
+  el.addEventListener('click',()=>{
+    document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
     el.classList.add('active');
     document.getElementById(el.dataset.page).classList.add('active');
-    if (el.dataset.page === 'page-tracking') loadTracking();
+    if(el.dataset.page==='page-tracking') loadTracking();
   });
 });
 
-// ── Drop zone ─────────────────────────────────────────────────────────────────
-const drop = document.getElementById('drop');
-const fi   = document.getElementById('fileInput');
-drop.addEventListener('click', () => fi.click());
-drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
-drop.addEventListener('dragleave', () => drop.classList.remove('over'));
-drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); setFile(e.dataTransfer.files[0]); });
-fi.addEventListener('change', e => setFile(e.target.files[0]));
+// Report tabs (Acupick / VPOS)
+document.querySelector('.report-tabs').addEventListener('click', e=>{
+  const tab = e.target.closest('.report-tab');
+  if (!tab) return;
+  document.querySelectorAll('.report-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.report-pane').forEach(p=>p.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById(tab.dataset.rp).classList.add('active');
+});
 
-function setFile(f) {
-  if (!f || !f.name.match(/\.(csv|xlsx|xls)$/i)) { toast('Please upload a .csv or .xlsx file', true); return; }
-  uploadedFile = f;
-  document.getElementById('fname').textContent = f.name;
-  document.getElementById('stepConfig').style.display = 'block';
-  document.getElementById('previewBtn').disabled = false;
-  if (!document.getElementById('dateFrom').value) {
-    const today = new Date().toISOString().split('T')[0];
-    const weekAgo = new Date(Date.now() - 6*86400000).toISOString().split('T')[0];
-    document.getElementById('dateFrom').value = weekAgo;
-    document.getElementById('dateTo').value   = today;
+// ── Drop zone ─────────────────────────────────────────────────────────────────
+const drop=document.getElementById('drop');
+const fi=document.getElementById('fileInput');
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('over')});
+drop.addEventListener('dragleave',()=>drop.classList.remove('over'));
+drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');setFile(e.dataTransfer.files[0])});
+fi.addEventListener('change',e=>{if(e.target.files[0]) setFile(e.target.files[0]);});
+
+function setFile(f){
+  if(!f||!f.name.match(/\.(csv|xlsx|xls)$/i)){toast('Please upload a .csv or .xlsx file',true);return;}
+  uploadedFile=f;
+  document.getElementById('fname').textContent=f.name;
+  document.getElementById('stepConfig').style.display='block';
+  document.getElementById('previewBtn').disabled=false;
+  if(!document.getElementById('dateFrom').value){
+    const today=new Date().toISOString().split('T')[0];
+    const weekAgo=new Date(Date.now()-6*86400000).toISOString().split('T')[0];
+    document.getElementById('dateFrom').value=weekAgo;
+    document.getElementById('dateTo').value=today;
   }
 }
 
 // ── Preview ───────────────────────────────────────────────────────────────────
-document.getElementById('previewBtn').addEventListener('click', async () => {
-  if (!uploadedFile) return;
+document.getElementById('previewBtn').addEventListener('click', async()=>{
+  if(!uploadedFile) return;
   setLoading('spin1','previewLabel',true,'Building…');
-  const fd = new FormData();
-  fd.append('file', uploadedFile);
-  fd.append('date_from', document.getElementById('dateFrom').value);
-  fd.append('date_to',   document.getElementById('dateTo').value);
-  try {
-    const res = await fetch(`${API}/api/preview`, {method:'POST',body:fd});
-    const text = await res.text();
+  const fd=new FormData();
+  fd.append('file',uploadedFile);
+  fd.append('date_from',document.getElementById('dateFrom').value);
+  fd.append('date_to',document.getElementById('dateTo').value);
+  try{
+    const res=await fetch(`${API}/api/preview`,{method:'POST',body:fd});
+    const text=await res.text();
     let data;
-    try { data = JSON.parse(text); }
-    catch { throw new Error(text.slice(0, 300)); }
-    if (!res.ok) throw new Error(data.detail || res.statusText);
-    previewData = data;
-    trackingMap = previewData.tracking_map || {};
-    incRows = previewData.inc || [];
-    renderPreview(previewData);
-    document.getElementById('stepPreview').style.display = 'block';
-    document.getElementById('stepExport').style.display  = 'block';
+    try{data=JSON.parse(text);}catch{throw new Error(text.slice(0,300));}
+    if(!res.ok) throw new Error(data.detail||res.statusText);
+    previewData=data;
+    trackingMap=data.tracking_map||{};
+    incRows=data.inc||[];
+    renderPreview(data);
+    document.getElementById('stepPreview').style.display='block';
+    document.getElementById('stepExport').style.display='block';
     toast('Preview ready!');
-  } catch(e) { toast('Error: '+e.message, true); }
-  finally { setLoading('spin1','previewLabel',false,'Rebuild Preview'); }
+  }catch(e){toast('Error: '+e.message,true);}
+  finally{setLoading('spin1','previewLabel',false,'Rebuild Preview');}
 });
 
 // ── Export ────────────────────────────────────────────────────────────────────
-document.getElementById('exportBtn').addEventListener('click', async () => {
-  if (!uploadedFile) return;
-  setLoading('spin2','exportLabel',true,'Generating…');
-  const fd = new FormData();
-  fd.append('file', uploadedFile);
-  fd.append('date_from', document.getElementById('dateFrom').value);
-  fd.append('date_to',   document.getElementById('dateTo').value);
-  try {
-    const res = await fetch(`${API}/api/export`, {method:'POST',body:fd});
-    if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
-    const blob = await res.blob();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `incident_report_${document.getElementById('dateFrom').value}_to_${document.getElementById('dateTo').value}.xlsx`;
+async function doExport(reportType, spinId, labelId, defaultLabel){
+  if(!uploadedFile) return;
+  setLoading(spinId,labelId,true,'Generating…');
+  const fd=new FormData();
+  fd.append('file',uploadedFile);
+  fd.append('date_from',document.getElementById('dateFrom').value);
+  fd.append('date_to',document.getElementById('dateTo').value);
+  fd.append('report_type',reportType);
+  try{
+    const res=await fetch(`${API}/api/export`,{method:'POST',body:fd});
+    if(!res.ok){
+      const text=await res.text();
+      let msg;
+      try{msg=JSON.parse(text).detail;}catch{msg=text.slice(0,300);}
+      throw new Error(msg);
+    }
+    const blob=await res.blob();
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`${reportType}_incident_report_${document.getElementById('dateFrom').value}_to_${document.getElementById('dateTo').value}.xlsx`;
     a.click();
     toast('Downloaded!');
-  } catch(e) { toast('Export error: '+e.message, true); }
-  finally { setLoading('spin2','exportLabel',false,'⬇ Download XLSX'); }
-});
+  }catch(e){toast('Export error: '+e.message,true);}
+  finally{setLoading(spinId,labelId,false,defaultLabel);}
+}
+document.getElementById('exportAcupickBtn').addEventListener('click',()=>doExport('acupick','spinA','exportAcupickLabel','⬇ Export Acupick XLSX'));
+document.getElementById('exportVposBtn').addEventListener('click',()=>doExport('vpos','spinV','exportVposLabel','⬇ Export VPOS XLSX'));
 
 // ── Render preview ────────────────────────────────────────────────────────────
-function renderPreview(d) {
-  const s = d.stats;
-  document.getElementById('stats').innerHTML = `
-    <div class="stat"><div class="n">${s.total}</div><div class="l">Total</div></div>
-    <div class="stat"><div class="n">${s.system}</div><div class="l">SYSTEM</div></div>
-    <div class="stat"><div class="n">${s.ops}</div><div class="l">OPS</div></div>
-    <div class="stat"><div class="n">${s.pe}</div><div class="l">PE</div></div>`;
+function renderPreview(d){
+  updateStats();
+  // Acupick sub-tabs
+  buildSubTabs('acuTabBar','acuTabPanes',[
+    {label:'INC', render:()=>renderINCTab('acu')},
+    {label:'Acupick Incident Categories', render:()=>renderCatTable(d.acupick_categories,'acu-pane1')},
+    {label:'Ops Issues', render:()=>renderOpsTable(d.acupick_ops,'acu-pane2')},
+    {label:'Summary', render:()=>renderSummary(d.summary,'acu-pane3')},
+  ], 'acu-pane');
 
-  const tabs = [
-    {label:'INC', key:'inc'},
-    {label:'Acupick Incident Categories', key:'categories'},
-    {label:'Ops Issues', key:'ops_issues'},
-    {label:'Summary', key:'summary'},
-  ];
-  const bar   = document.getElementById('tabBar');
-  const panes = document.getElementById('tabPanes');
-  bar.innerHTML   = tabs.map((t,i) => `<div class="tab${i===0?' active':''}" data-i="${i}">${t.label}</div>`).join('');
-  panes.innerHTML = tabs.map((t,i) => `<div class="tab-pane${i===0?' active':''}" id="pane${i}"></div>`).join('');
-  bar.querySelectorAll('.tab').forEach(el => {
-    el.addEventListener('click', () => {
+  // VPOS sub-tabs
+  buildSubTabs('vposTabBar','vposTabPanes',[
+    {label:'INC', render:()=>renderINCTab('vpos')},
+    {label:'VPOS Incident Categories', render:()=>renderCatTable(d.vpos_categories,'vpos-pane1')},
+    {label:'Ops Issues', render:()=>renderOpsTable(d.vpos_ops,'vpos-pane2')},
+  ], 'vpos-pane');
+}
+
+function buildSubTabs(barId, panesId, tabs, panePrefix){
+  const bar=document.getElementById(barId);
+  const panes=document.getElementById(panesId);
+  bar.innerHTML=tabs.map((t,i)=>`<div class="tab${i===0?' active':''}" data-i="${i}">${t.label}</div>`).join('');
+  panes.innerHTML=tabs.map((t,i)=>`<div class="tab-pane${i===0?' active':''}" id="${panePrefix}${i}"></div>`).join('');
+  bar.querySelectorAll('.tab').forEach(el=>{
+    el.addEventListener('click',()=>{
       bar.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
       panes.querySelectorAll('.tab-pane').forEach(t=>t.classList.remove('active'));
       el.classList.add('active');
-      document.getElementById('pane'+el.dataset.i).classList.add('active');
+      document.getElementById(panePrefix+el.dataset.i).classList.add('active');
     });
   });
-
-  renderINCTab();
-  renderCatTable(d.categories, 'pane1');
-  renderOpsTable(d.ops_issues, 'pane2');
-  renderSummary(d.summary,     'pane3');
+  // render all panes
+  tabs.forEach(t=>t.render());
 }
 
-// ── INC tab with sort, filter, editable CI & Tracking ────────────────────────
-const INC_COLS = ['Type','Priority','Number','Short description','Configuration Item','State','Caller','Division','Tracking','Date Opened'];
-let incEditMode = false;
+function updateStats(){
+  document.getElementById('stats').innerHTML=`
+    <div class="stat"><div class="n">${incRows.length}</div><div class="l">Total</div></div>
+    <div class="stat"><div class="n">${incRows.filter(r=>r['Type']==='SYSTEM').length}</div><div class="l">SYSTEM</div></div>
+    <div class="stat"><div class="n">${incRows.filter(r=>r['Type']==='OPS').length}</div><div class="l">OPS</div></div>
+    <div class="stat"><div class="n">${incRows.filter(r=>r['Type']==='PE').length}</div><div class="l">PE</div></div>`;
+}
 
-function renderINCTab() {
-  const pane = document.getElementById('pane0');
-  const trackingCodes = Object.keys(trackingMap);
+// ── INC Tab ───────────────────────────────────────────────────────────────────
+const INC_COLS=['Type','Priority','Number','Short description','Configuration Item','State','Caller','Division','Tracking','Date Opened','Parent Incident'];
 
-  pane.innerHTML = `
+function getIncSlice(section){
+  if(section==='acu') return incRows.filter(r=>r['Configuration Item']!==VPOS_CI);
+  if(section==='vpos') return incRows.filter(r=>r['Configuration Item']===VPOS_CI);
+  return incRows;
+}
+
+function renderINCTab(section){
+  const paneId = section==='acu'?'acu-pane0':'vpos-pane0';
+  const pane   = document.getElementById(paneId);
+  const sortObj   = section==='acu'?acuSort:vposSort;
+  const filterObj = section==='acu'?acuFilter:vposFilter;
+  const slice=getIncSlice(section);
+  const presentCodes=[...new Set(slice.map(r=>r['Tracking']).filter(Boolean))].sort();
+  const trackingCodes=Object.keys(trackingMap);
+
+  pane.innerHTML=`
     <div class="filter-row">
-      <input type="text" id="incSearch" placeholder="Search any column…" style="width:220px">
-      <select id="incTypeFilter"><option value="">All Types</option>${TYPES_LIST.map(t=>`<option>${t}</option>`).join('')}</select>
-      <select id="incTrackFilter"><option value="">All Tracking</option>${trackingCodes.map(c=>`<option>${c}</option>`).join('')}</select>
-      <button class="btn btn-ghost btn-sm" id="incClearBtn">Clear</button>
-      <span id="incCount" style="font-size:11px;color:#9ca3af;margin-left:4px"></span>
+      <input type="text" id="${section}-incSearch" placeholder="Search any column…" style="width:220px">
+      <select id="${section}-incTypeFilter"><option value="">All Types</option>${TYPES_LIST.map(t=>`<option>${t}</option>`).join('')}</select>
+      <select id="${section}-incTrackFilter"><option value="">All Tracking</option>${presentCodes.map(c=>`<option>${c}</option>`).join('')}</select>
+      <button class="btn btn-ghost btn-sm" id="${section}-incClearBtn">Clear</button>
+      <span id="${section}-incCount" style="font-size:11px;color:#9ca3af;margin-left:4px"></span>
       <div style="margin-left:auto;display:flex;gap:8px">
-        <button class="btn btn-ghost btn-sm" id="incEditBtn">✏ Edit</button>
-        <button class="btn btn-primary btn-sm" id="incSaveBtn" style="display:none">💾 Save</button>
-        <button class="btn btn-ghost btn-sm" id="incCancelBtn" style="display:none">✕ Cancel</button>
+        <button class="btn btn-ghost btn-sm" id="${section}-incEditBtn">✏️ Edit</button>
+        <button class="btn btn-primary btn-sm" id="${section}-incSaveBtn" style="display:none">💾 Save</button>
+        <button class="btn btn-ghost btn-sm" id="${section}-incCancelBtn" style="display:none">✕ Cancel</button>
       </div>
     </div>
-    <div class="tbl-wrap" id="incTblWrap">
-      <table id="incTable">
-        <thead><tr id="incHead"></tr></thead>
-        <tbody id="incBody"></tbody>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr id="${section}-incHead"></tr></thead>
+        <tbody id="${section}-incBody"></tbody>
       </table>
     </div>`;
 
-  const head = document.getElementById('incHead');
-  INC_COLS.forEach(col => {
-    const th = document.createElement('th');
-    th.innerHTML = `${col} <span class="sort-icon">⇅</span>`;
-    th.addEventListener('click', () => sortINC(col));
+  const head=document.getElementById(`${section}-incHead`);
+  INC_COLS.forEach(col=>{
+    const th=document.createElement('th');
+    th.innerHTML=`${col} <span class="sort-icon">⇅</span>`;
+    th.addEventListener('click',()=>sortINC(section,col));
     head.appendChild(th);
   });
 
-  renderINCRows();
+  renderINCRows(section);
 
-  document.getElementById('incSearch').addEventListener('input', e => { incFilter.text = e.target.value; renderINCRows(); });
-  document.getElementById('incTypeFilter').addEventListener('change', e => { incFilter.type = e.target.value; renderINCRows(); });
-  document.getElementById('incTrackFilter').addEventListener('change', e => { incFilter.tracking = e.target.value; renderINCRows(); });
-  document.getElementById('incClearBtn').addEventListener('click', () => {
-    incFilter = {text:'',type:'',tracking:''};
-    document.getElementById('incSearch').value = '';
-    document.getElementById('incTypeFilter').value = '';
-    document.getElementById('incTrackFilter').value = '';
-    renderINCRows();
+  document.getElementById(`${section}-incSearch`).addEventListener('input',e=>{
+    if(section==='acu') acuFilter.text=e.target.value; else vposFilter.text=e.target.value;
+    renderINCRows(section);
   });
-  document.getElementById('incEditBtn').addEventListener('click', () => {
-    incRowsSnapshot = JSON.parse(JSON.stringify(incRows)); // snapshot for cancel
-    incEditMode = true;
-    document.getElementById('incEditBtn').style.display = 'none';
-    document.getElementById('incSaveBtn').style.display = 'inline-flex';
-    document.getElementById('incCancelBtn').style.display = 'inline-flex';
-    renderINCRows();
+  document.getElementById(`${section}-incTypeFilter`).addEventListener('change',e=>{
+    if(section==='acu') acuFilter.type=e.target.value; else vposFilter.type=e.target.value;
+    renderINCRows(section);
   });
-  document.getElementById('incSaveBtn').addEventListener('click', () => {
-    // Flush any open selects back to incRows
-    document.querySelectorAll('#incBody tr').forEach(tr => {
-      const idx = parseInt(tr.dataset.idx);
-      if (isNaN(idx)) return;
-      const typeSel = tr.querySelector('.edit-type');
-      const ciSel   = tr.querySelector('.edit-ci');
-      const trSel   = tr.querySelector('.edit-tracking');
-      if (typeSel) incRows[idx]['Type']                 = typeSel.value;
-      if (ciSel)   incRows[idx]['Configuration Item']   = ciSel.value;
-      if (trSel) {
-        incRows[idx]['Tracking'] = trSel.value;
-        if (trSel.value && trackingMap[trSel.value])
-          incRows[idx]['Type'] = trackingMap[trSel.value].type;
+  document.getElementById(`${section}-incTrackFilter`).addEventListener('change',e=>{
+    if(section==='acu') acuFilter.tracking=e.target.value; else vposFilter.tracking=e.target.value;
+    renderINCRows(section);
+  });
+  document.getElementById(`${section}-incClearBtn`).addEventListener('click',()=>{
+    if(section==='acu') acuFilter={text:'',type:'',tracking:''}; else vposFilter={text:'',type:'',tracking:''};
+    document.getElementById(`${section}-incSearch`).value='';
+    document.getElementById(`${section}-incTypeFilter`).value='';
+    document.getElementById(`${section}-incTrackFilter`).value='';
+    renderINCRows(section);
+  });
+  document.getElementById(`${section}-incEditBtn`).addEventListener('click',()=>{
+    incRowsSnapshot=JSON.parse(JSON.stringify(incRows));
+    if(section==='acu') acuEditMode=true; else vposEditMode=true;
+    document.getElementById(`${section}-incEditBtn`).style.display='none';
+    document.getElementById(`${section}-incSaveBtn`).style.display='inline-flex';
+    document.getElementById(`${section}-incCancelBtn`).style.display='inline-flex';
+    renderINCRows(section);
+  });
+  document.getElementById(`${section}-incSaveBtn`).addEventListener('click',()=>{
+    document.querySelectorAll(`#${section}-incBody tr`).forEach(tr=>{
+      const idx=parseInt(tr.dataset.idx);
+      if(isNaN(idx)) return;
+      const typeSel=tr.querySelector('.edit-type');
+      const ciInp=tr.querySelector('.edit-ci');
+      const trInp=tr.querySelector('.edit-tracking');
+      const parentInp=tr.querySelector('.edit-parent');
+      if(typeSel) incRows[idx]['Type']=typeSel.value;
+      if(ciInp)   incRows[idx]['Configuration Item']=ciInp.value.trim();
+      if(parentInp) incRows[idx]['Parent Incident']=parentInp.value.trim();
+      if(trInp){
+        const val=trInp.value.trim().split(' — ')[0].trim();
+        incRows[idx]['Tracking']=val;
+        if(val&&trackingMap[val]) incRows[idx]['Type']=trackingMap[val].type;
       }
     });
-    incEditMode = false;
-    document.getElementById('incEditBtn').style.display = 'inline-flex';
-    document.getElementById('incSaveBtn').style.display = 'none';
-    document.getElementById('incCancelBtn').style.display = 'none';
-    renderINCRows();
-    toast('Changes saved — will apply on next export');
+    if(section==='acu') acuEditMode=false; else vposEditMode=false;
+    document.getElementById(`${section}-incEditBtn`).style.display='inline-flex';
+    document.getElementById(`${section}-incSaveBtn`).style.display='none';
+    document.getElementById(`${section}-incCancelBtn`).style.display='none';
+    renderINCRows(section);
+    // Also refresh the other section's INC
+    const other=section==='acu'?'vpos':'acu';
+    renderINCRows(other);
+    refreshAllTabs();
+    toast('Saved — all tabs updated');
   });
-  document.getElementById('incCancelBtn').addEventListener('click', () => {
-    incRows = JSON.parse(JSON.stringify(incRowsSnapshot)); // restore snapshot
-    incEditMode = false;
-    document.getElementById('incEditBtn').style.display = 'inline-flex';
-    document.getElementById('incSaveBtn').style.display = 'none';
-    document.getElementById('incCancelBtn').style.display = 'none';
-    renderINCRows();
+  document.getElementById(`${section}-incCancelBtn`).addEventListener('click',()=>{
+    incRows=JSON.parse(JSON.stringify(incRowsSnapshot));
+    if(section==='acu') acuEditMode=false; else vposEditMode=false;
+    document.getElementById(`${section}-incEditBtn`).style.display='inline-flex';
+    document.getElementById(`${section}-incSaveBtn`).style.display='none';
+    document.getElementById(`${section}-incCancelBtn`).style.display='none';
+    renderINCRows(section);
   });
 }
 
-function sortINC(col) {
-  if (incSort.col === col) incSort.asc = !incSort.asc;
-  else { incSort.col = col; incSort.asc = true; }
-  renderINCRows();
+function sortINC(section, col){
+  const s=section==='acu'?acuSort:vposSort;
+  if(s.col===col) s.asc=!s.asc; else{s.col=col;s.asc=true;}
+  renderINCRows(section);
 }
 
-function getFilteredSorted() {
-  let rows = incRows.map((r, i) => ({...r, _idx: i}));
-  const {text, type, tracking} = incFilter;
-  if (type)     rows = rows.filter(r => r['Type'] === type);
-  if (tracking) rows = rows.filter(r => r['Tracking'] === tracking);
-  if (text) {
-    const lo = text.toLowerCase();
-    rows = rows.filter(r => INC_COLS.some(c => String(r[c]||'').toLowerCase().includes(lo)));
+function getFilteredSortedINC(section){
+  const slice=getIncSlice(section);
+  const flt=section==='acu'?acuFilter:vposFilter;
+  const srt=section==='acu'?acuSort:vposSort;
+  let rows=slice.map(r=>({...r,_idx:incRows.indexOf(r)}));
+  if(flt.type)     rows=rows.filter(r=>r['Type']===flt.type);
+  if(flt.tracking) rows=rows.filter(r=>r['Tracking']===flt.tracking);
+  if(flt.text){
+    const lo=flt.text.toLowerCase();
+    rows=rows.filter(r=>INC_COLS.some(c=>String(r[c]||'').toLowerCase().includes(lo)));
   }
-  if (incSort.col) {
-    rows.sort((a,b) => {
-      const av = String(a[incSort.col]||''), bv = String(b[incSort.col]||'');
-      return incSort.asc ? av.localeCompare(bv) : bv.localeCompare(av);
+  if(srt.col){
+    rows.sort((a,b)=>{
+      const av=String(a[srt.col]||''),bv=String(b[srt.col]||'');
+      return srt.asc?av.localeCompare(bv):bv.localeCompare(av);
     });
   }
   return rows;
 }
 
-function renderINCRows() {
-  const rows = getFilteredSorted();
-  const tbody = document.getElementById('incBody');
-  if (!tbody) return;
-  document.getElementById('incCount').textContent = `${rows.length} rows`;
+function renderINCRows(section){
+  const rows=getFilteredSortedINC(section);
+  const tbody=document.getElementById(section+'-incBody');
+  if(!tbody) return;
+  const countEl=document.getElementById(section+'-incCount');
+  if(countEl) countEl.textContent=rows.length+' rows';
+  const editMode=section==='acu'?acuEditMode:vposEditMode;
+  const ciList=[...new Set(Object.values(trackingMap).map(r=>r.ci))];
+  const trackingCodes=Object.keys(trackingMap);
 
-  const ciList = [...new Set(Object.values(trackingMap).map(r => r.ci))];
-  const trackingCodes = Object.keys(trackingMap);
-
-  tbody.innerHTML = rows.map(r => {
-    const idx = r._idx;
-    const typeBadge = `<span class="badge b-${(r['Type']||'ops').toLowerCase()}">${r['Type']||''}</span>`;
-    const cells = INC_COLS.map(col => {
-      if (col === 'Type') {
-        if (incEditMode) {
-          return `<td><select class="edit-type" style="min-width:90px;font-size:12px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px">
-            ${TYPES_LIST.map(t => `<option ${r[col]===t?'selected':''}>${t}</option>`).join('')}
-          </select></td>`;
+  tbody.innerHTML=rows.map(function(r){
+    const idx=r._idx;
+    const typeBadge='<span class="badge b-'+(r['Type']||'ops').toLowerCase()+'">'+(r['Type']||'')+'</span>';
+    const cells=INC_COLS.map(function(col){
+      if(col==='Type'){
+        if(editMode){
+          const opts=TYPES_LIST.map(function(t){return '<option '+(r[col]===t?'selected':'')+'>'+t+'</option>';}).join('');
+          return '<td><select class="edit-type" style="min-width:90px;font-size:12px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px">'+opts+'</select></td>';
         }
-        return `<td>${typeBadge}</td>`;
+        return '<td>'+typeBadge+'</td>';
       }
-      if (incEditMode && col === 'Configuration Item') {
-        const opts = ciList.map(c => `<option ${r[col]===c?'selected':''}>${esc(c)}</option>`).join('');
-        return `<td><select class="edit-ci" style="min-width:160px;font-size:12px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px">${opts}</select></td>`;
+      if(editMode&&col==='Parent Incident'){
+        return '<td><input class="edit-parent" value="'+esc(r[col]||'')+'" style="min-width:120px;font-size:12px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px"></td>';
       }
-      if (incEditMode && col === 'Tracking') {
-        const opts = `<option value="">-- none --</option>` + trackingCodes.map(c => `<option ${r[col]===c?'selected':''}>${esc(c)}</option>`).join('');
-        return `<td><select class="edit-tracking" style="min-width:100px;font-size:12px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px">${opts}</select></td>`;
+      if(editMode&&col==='Configuration Item'){
+        const listId='ci-list-'+idx;
+        const opts=ciList.map(function(c){return '<option value="'+esc(c)+'">';}).join('');
+        return '<td><input class="edit-ci" list="'+listId+'" value="'+esc(r[col]||'')+'" style="min-width:200px;font-size:12px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px" placeholder="Type to search CI..."><datalist id="'+listId+'">'+opts+'</datalist></td>';
       }
-      return `<td>${esc(r[col]||'')}</td>`;
+      if(editMode&&col==='Tracking'){
+        const listId='tk-list-'+idx;
+        const opts=trackingCodes.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+' - '+esc((trackingMap[c]&&trackingMap[c].category)||'')+'</option>';}).join('');
+        return '<td><input class="edit-tracking" list="'+listId+'" value="'+esc(r[col]||'')+'" style="min-width:160px;font-size:12px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px" placeholder="Type to search tracking code..."><datalist id="'+listId+'">'+opts+'</datalist></td>';
+      }
+      return '<td>'+esc(r[col]||'')+'</td>';
     });
-    return `<tr data-idx="${idx}">${cells.join('')}</tr>`;
-  }).join('') || `<tr><td colspan="${INC_COLS.length}" class="empty">No rows match</td></tr>`;
+    return '<tr data-idx="'+idx+'">'+cells.join('')+'</tr>';
+  }).join('')||'<tr><td colspan="'+INC_COLS.length+'" class="empty">No rows match</td></tr>';
 
-  document.querySelectorAll('#incHead th').forEach((th, i) => {
-    const icon = th.querySelector('.sort-icon');
-    if (!icon) return;
-    icon.textContent = incSort.col === INC_COLS[i] ? (incSort.asc ? '↑' : '↓') : '⇅';
+  document.querySelectorAll('#'+section+'-incHead th').forEach(function(th,i){
+    const s=section==='acu'?acuSort:vposSort;
+    const icon=th.querySelector('.sort-icon');
+    if(!icon) return;
+    icon.textContent=s.col===INC_COLS[i]?(s.asc?'↑':'↓'):'⇅';
   });
 }
 
-// ── Category / Acupick tables ─────────────────────────────────────────────────
-function renderCatTable(rows, paneId) {
-  if (!rows.length) { document.getElementById(paneId).innerHTML = empty('No tracking codes detected'); return; }
-  document.getElementById(paneId).innerHTML = `
+// ── Recompute from incRows ────────────────────────────────────────────────────
+function recomputeFromIncRows(){
+  const acupickInc = incRows.filter(r=>r['Configuration Item']!==VPOS_CI);
+  const vposInc    = incRows.filter(r=>r['Configuration Item']===VPOS_CI);
+
+  function buildCats(slice){
+    const result={OPS:[],SYSTEM:[],PE:[]};
+    slice.forEach(r=>{
+      const code=r['Tracking'], type=r['Type']||'OPS';
+      if(!code||!result[type]) return;
+      let entry=result[type].find(e=>e.Code===code);
+      if(!entry){
+        const info=trackingMap[code]||{};
+        entry={Code:code,Category:info.category||r['Short description']||code,Total:0};
+        DIVS.forEach(d=>entry[d]=0);
+        result[type].push(entry);
+      }
+      const div=r['Division'];
+      if(div&&DIVS.includes(div)) entry[div]++;
+      entry['Total']++;
+    });
+    Object.keys(result).forEach(t=>result[t].sort((a,b)=>b.Total-a.Total));
+    return result;
+  }
+
+  function buildOps(slice){
+    const opsMap={};
+    slice.filter(r=>r['Type']==='OPS').forEach(r=>{
+      const code=r['Tracking'];
+      if(!code) return;
+      if(!opsMap[code]){
+        const info=trackingMap[code]||{};
+        opsMap[code]={Code:code,Category:info.category||r['Short description']||code,Total:0};
+        DIVS.forEach(d=>opsMap[code][d]=[]);
+      }
+      const div=r['Division'];
+      if(div&&DIVS.includes(div)) opsMap[code][div].push(r['Caller']);
+      opsMap[code]['Total']++;
+    });
+    return Object.values(opsMap).map(r=>{
+      const row={...r};
+      DIVS.forEach(d=>{row[d]=Array.isArray(row[d])?(row[d].length?row[d].join('\n'):'0'):row[d];});
+      return row;
+    }).sort((a,b)=>b.Total-a.Total);
+  }
+
+  const dateFrom=document.getElementById('dateFrom').value;
+  const dateTo=document.getElementById('dateTo').value;
+  const dayMap={};
+  incRows.forEach(r=>{
+    const d=(r['Date Opened']||'').split('T')[0].split(' ')[0];
+    if(!d||d<dateFrom||d>dateTo) return;
+    if(!dayMap[d]) dayMap[d]=[];
+    dayMap[d].push(r);
+  });
+  const daily=Object.keys(dayMap).sort().map(day=>({
+    date:day,
+    data:CI_LIST_SUMMARY.map(ci=>{
+      const row={'Configuration Item':ci};
+      TYPES_LIST.forEach(t=>{row[t]=dayMap[day].filter(r=>r['Configuration Item']===ci&&r['Type']===t).length;});
+      return row;
+    })
+  }));
+  const totals=CI_LIST_SUMMARY.map(ci=>{
+    const row={'Configuration Item':ci};
+    TYPES_LIST.forEach(t=>{
+      row[t]=incRows.filter(r=>{
+        const d=(r['Date Opened']||'').split('T')[0].split(' ')[0];
+        return r['Configuration Item']===ci&&r['Type']===t&&d>=dateFrom&&d<=dateTo;
+      }).length;
+    });
+    row['Total']=TYPES_LIST.reduce((s,t)=>s+row[t],0);
+    return row;
+  });
+
+  return {
+    acupick_categories:buildCats(acupickInc),
+    acupick_ops:buildOps(acupickInc),
+    vpos_categories:buildCats(vposInc),
+    vpos_ops:buildOps(vposInc),
+    summary:{date_from:dateFrom,date_to:dateTo,daily,totals}
+  };
+}
+
+function refreshAllTabs(){
+  const u=recomputeFromIncRows();
+  renderCatTable(u.acupick_categories,'acu-pane1');
+  renderOpsTable(u.acupick_ops,       'acu-pane2');
+  renderSummary(u.summary,            'acu-pane3');
+  renderCatTable(u.vpos_categories,   'vpos-pane1');
+  renderOpsTable(u.vpos_ops,          'vpos-pane2');
+  updateStats();
+}
+
+window._refreshAcuCat = ()=>{const u=recomputeFromIncRows();renderCatTable(u.acupick_categories,'acu-pane1');};
+window._refreshAcuOps = ()=>{const u=recomputeFromIncRows();renderOpsTable(u.acupick_ops,'acu-pane2');};
+window._refreshAcuSum = ()=>{const u=recomputeFromIncRows();renderSummary(u.summary,'acu-pane3');};
+window._refreshVposCat= ()=>{const u=recomputeFromIncRows();renderCatTable(u.vpos_categories,'vpos-pane1');};
+window._refreshVposOps= ()=>{const u=recomputeFromIncRows();renderOpsTable(u.vpos_ops,'vpos-pane2');};
+
+// ── Cat table ─────────────────────────────────────────────────────────────────
+function renderCatTable(cats, paneId){
+  const pane=document.getElementById(paneId);
+  if(!pane) return;
+  const refreshFn=paneId.startsWith('acu')?'_refreshAcuCat':'_refreshVposCat';
+  const isEmpty=!cats||Object.values(cats).every(r=>!r||!r.length);
+  if(isEmpty){pane.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-ghost btn-sm" onclick="window.${refreshFn}()">↻ Refresh</button></div>${empty('No tracking codes detected')}`;return;}
+  const sections=['OPS','SYSTEM','PE'].map(type=>{
+    const rows=(cats[type]||[]).filter(r=>r.Total>0);
+    if(!rows.length) return '';
+    const summary=DIVS.reduce((acc,d)=>{acc[d]=rows.reduce((s,r)=>s+(r[d]||0),0);return acc;},{});
+    summary.Total=rows.reduce((s,r)=>s+(r.Total||0),0);
+    return `<div style="margin-bottom:20px">
+      <div style="font-size:12px;font-weight:600;background:#4f46e5;color:#fff;padding:6px 10px;border-radius:6px 6px 0 0">${TYPE_SECTION_LABELS[type]||type}</div>
+      <div class="tbl-wrap" style="border-radius:0 0 6px 6px"><table>
+        <tr><th>Code</th><th>Category</th>${DIVS.map(d=>`<th>${d}</th>`).join('')}<th>Total</th></tr>
+        ${rows.map(r=>`<tr><td><b>${esc(r.Code)}</b></td><td>${esc(r.Category)}</td>${DIVS.map(d=>`<td class="num">${r[d]||0}</td>`).join('')}<td class="num"><b>${r.Total}</b></td></tr>`).join('')}
+        <tr style="background:#e0e7ff;font-weight:600"><td colspan="2" style="padding:6px 10px">Summary</td>${DIVS.map(d=>`<td class="num">${summary[d]}</td>`).join('')}<td class="num"><b>${summary.Total}</b></td></tr>
+      </table></div></div>`;
+  }).join('');
+  pane.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-ghost btn-sm" onclick="window.${refreshFn}()">↻ Refresh</button></div>${sections}`;
+}
+
+// ── Ops table ─────────────────────────────────────────────────────────────────
+function renderOpsTable(rows, paneId){
+  const pane=document.getElementById(paneId);
+  if(!pane) return;
+  const refreshFn=paneId.startsWith('acu')?'_refreshAcuOps':'_refreshVposOps';
+  if(!rows||!rows.length){pane.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-ghost btn-sm" onclick="window.${refreshFn}()">↻ Refresh</button></div>${empty('No Ops incidents found')}`;return;}
+  pane.innerHTML=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-ghost btn-sm" onclick="window.${refreshFn}()">↻ Refresh</button></div>
     <div class="tbl-wrap"><table>
       <tr><th>Code</th><th>Category</th>${DIVS.map(d=>`<th>${d}</th>`).join('')}<th>Total</th></tr>
-      ${rows.map(r=>`<tr>
-        <td><b>${esc(r.Code)}</b></td><td>${esc(r.Category)}</td>
-        ${DIVS.map(d=>`<td class="num">${r[d]||0}</td>`).join('')}
-        <td class="num"><b>${r.Total}</b></td>
-      </tr>`).join('')}
+      ${rows.map(r=>`<tr><td><b>${esc(r.Code)}</b></td><td>${esc(r.Category)}</td>${DIVS.map(d=>`<td style="white-space:pre;font-size:11px">${esc(r[d]||'0')}</td>`).join('')}<td class="num"><b>${r.Total}</b></td></tr>`).join('')}
     </table></div>`;
 }
 
-function renderOpsTable(rows, paneId) {
-  if (!rows.length) { document.getElementById(paneId).innerHTML = empty('No Ops incidents found'); return; }
-  document.getElementById(paneId).innerHTML = `
-    <div class="tbl-wrap"><table>
-      <tr><th>Code</th><th>Category</th>${DIVS.map(d=>`<th>${d}</th>`).join('')}<th>Total</th></tr>
-      ${rows.map(r=>`<tr>
-        <td><b>${esc(r.Code)}</b></td><td>${esc(r.Category)}</td>
-        ${DIVS.map(d=>`<td style="white-space:pre;font-size:11px">${esc(r[d]||'0')}</td>`).join('')}
-        <td class="num"><b>${r.Total}</b></td>
-      </tr>`).join('')}
-    </table></div>`;
-}
-
-function renderSummary(s, paneId) {
-  const TYPES_ALL = [...TYPES_LIST, 'Total'];
-  const totalRows = s.totals.map(r => `<tr>
-    <td>${esc(r['Configuration Item'])}</td>
-    ${TYPES_LIST.map(t => `<td class="num">${r[t]}</td>`).join('')}
-    <td class="num"><b>${r['Total']}</b></td>
-  </tr>`).join('');
-
-  const dailyBlocks = (s.daily || []).map(d => `
+// ── Summary ───────────────────────────────────────────────────────────────────
+function renderSummary(s, paneId){
+  const pane=document.getElementById(paneId);
+  if(!pane) return;
+  const TYPES_ALL=[...TYPES_LIST,'Total'];
+  const totalRows=s.totals.map(r=>`<tr><td>${esc(r['Configuration Item'])}</td>${TYPES_LIST.map(t=>`<td class="num">${r[t]}</td>`).join('')}<td class="num"><b>${r['Total']}</b></td></tr>`).join('');
+  const dailyBlocks=(s.daily||[]).map(d=>`
     <div style="margin-top:18px">
       <div style="font-size:12px;font-weight:600;color:#4f46e5;margin-bottom:6px">${d.date}</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <tr><th style="text-align:left;padding:5px 8px;background:#f9fafb;border-bottom:1px solid #e5e7eb">Configuration Item</th>
-          ${TYPES_LIST.map(t=>`<th style="padding:5px 8px;background:#f9fafb;border-bottom:1px solid #e5e7eb;text-align:center">${t}</th>`).join('')}
-        </tr>
-        ${d.data.map(r=>`<tr>
-          <td style="padding:5px 8px;border-bottom:1px solid #f3f4f6">${esc(r['Configuration Item'])}</td>
-          ${TYPES_LIST.map(t=>`<td style="padding:5px 8px;border-bottom:1px solid #f3f4f6;text-align:center">${r[t]}</td>`).join('')}
-        </tr>`).join('')}
+        <tr><th style="text-align:left;padding:5px 8px;background:#f9fafb;border-bottom:1px solid #e5e7eb">Configuration Item</th>${TYPES_LIST.map(t=>`<th style="padding:5px 8px;background:#f9fafb;border-bottom:1px solid #e5e7eb;text-align:center">${t}</th>`).join('')}</tr>
+        ${d.data.map(r=>`<tr><td style="padding:5px 8px;border-bottom:1px solid #f3f4f6">${esc(r['Configuration Item'])}</td>${TYPES_LIST.map(t=>`<td style="padding:5px 8px;border-bottom:1px solid #f3f4f6;text-align:center">${r[t]}</td>`).join('')}</tr>`).join('')}
       </table>
     </div>`).join('');
-
-  document.getElementById(paneId).innerHTML = `
-    <div style="font-size:13px;margin-bottom:12px">
-      Report period: <b>${s.date_from}</b> to <b>${s.date_to}</b>
+  pane.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:13px">Report period: <b>${s.date_from}</b> to <b>${s.date_to}</b></div>
+      <button class="btn btn-ghost btn-sm" onclick="window._refreshAcuSum()">↻ Refresh</button>
     </div>
+    <div style="margin-bottom:24px"><canvas id="summaryChart" style="width:100%;max-height:350px"></canvas></div>
     <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">Weekly Totals</div>
-    <div class="tbl-wrap">
-      <table>
-        <tr>
-          <th>Configuration Item</th>
-          ${TYPES_ALL.map(t=>`<th>${t}</th>`).join('')}
-        </tr>
-        ${totalRows}
-      </table>
-    </div>
+    <div class="tbl-wrap"><table>
+      <tr><th>Configuration Item</th>${TYPES_ALL.map(t=>`<th>${t}</th>`).join('')}</tr>
+      ${totalRows}
+    </table></div>
     ${dailyBlocks}`;
+  requestAnimationFrame(()=>buildSummaryChart(s));
 }
 
-// ── Tracking Config page ──────────────────────────────────────────────────────
-let allTrackingRows = [];
-let refSort = {col: null, asc: true};
-let refFilter = {text: '', type: '', ci: ''};
-
-async function syncTrackingMap() {
-  try {
-    const res = await fetch(`${API}/api/tracking`);
-    allTrackingRows = await res.json();
-    // Rebuild trackingMap from latest DB
-    trackingMap = {};
-    allTrackingRows.forEach(r => { trackingMap[r.tracking_code] = r; });
-    populateRefFilters();
-    renderRefTable(getFilteredSortedRef());
-    // If INC tab is rendered, refresh its dropdowns
-    if (incRows.length) renderINCRows();
-  } catch(e) { toast('Failed to sync tracking data', true); }
-}
-
-function populateRefFilters() {
-  const ciSet = [...new Set(allTrackingRows.map(r => r.ci))].sort();
-  const ciSel = document.getElementById('refCiFilter');
-  const cur = ciSel ? ciSel.value : '';
-  if (ciSel) {
-    ciSel.innerHTML = '<option value="">All CIs</option>' + ciSet.map(c => `<option ${cur===c?'selected':''}>${esc(c)}</option>`).join('');
-  }
-}
-
-function getFilteredSortedRef() {
-  let rows = [...allTrackingRows];
-  const {text, type, ci} = refFilter;
-  if (type) rows = rows.filter(r => r.type === type);
-  if (ci)   rows = rows.filter(r => r.ci === ci);
-  if (text) {
-    const lo = text.toLowerCase();
-    rows = rows.filter(r =>
-      r.tracking_code.toLowerCase().includes(lo) ||
-      r.category.toLowerCase().includes(lo) ||
-      r.ci.toLowerCase().includes(lo)
-    );
-  }
-  if (refSort.col) {
-    rows.sort((a, b) => {
-      const av = String(a[refSort.col]||'').toLowerCase();
-      const bv = String(b[refSort.col]||'').toLowerCase();
-      return refSort.asc ? av.localeCompare(bv) : bv.localeCompare(av);
-    });
-  }
-  return rows;
-}
-
-function sortRef(col) {
-  if (refSort.col === col) refSort.asc = !refSort.asc;
-  else { refSort.col = col; refSort.asc = true; }
-  renderRefTable(getFilteredSortedRef());
-  // update sort icons
-  document.querySelectorAll('#refHead th[data-col]').forEach(th => {
-    const icon = th.querySelector('.sort-icon');
-    if (!icon) return;
-    icon.textContent = refSort.col === th.dataset.col ? (refSort.asc ? '↑' : '↓') : '⇅';
+function buildSummaryChart(s){
+  const canvas=document.getElementById('summaryChart');
+  if(!canvas) return;
+  if(window._summaryChartInst){window._summaryChartInst.destroy();}
+  const ciShort=ci=>{const m=ci.match(/\(([^)]+)\)$/);return m?m[1]:ci.slice(0,10);};
+  const days=(s.daily||[]).map(d=>d.date);
+  const labels=days.flatMap(day=>TYPES_LIST.map(t=>`${t}\n${day}`));
+  const allCIs=CI_LIST_SUMMARY.filter(ci=>(s.daily||[]).some(d=>d.data.some(r=>r['Configuration Item']===ci&&TYPES_LIST.some(t=>r[t]>0))));
+  const CI_COLORS=['#f59e0b','#3b82f6','#10b981','#8b5cf6','#ef4444','#06b6d4','#f97316','#84cc16','#ec4899','#6366f1','#14b8a6','#f43f5e','#a855f7','#0ea5e9','#22c55e','#fb923c','#e879f9'];
+  const datasets=allCIs.map((ci,i)=>({
+    label:ciShort(ci),backgroundColor:CI_COLORS[i%CI_COLORS.length],stack:'stack',
+    data:days.flatMap(day=>{
+      const dayData=(s.daily||[]).find(d=>d.date===day);
+      const row=dayData?.data.find(r=>r['Configuration Item']===ci);
+      return TYPES_LIST.map(t=>row?(row[t]||0):0);
+    })
+  }));
+  const dayBoundaries=days.map((_,i)=>i*TYPES_LIST.length-0.5).slice(1);
+  window._summaryChartInst=new Chart(canvas,{
+    type:'bar',data:{labels,datasets},
+    options:{
+      responsive:true,
+      plugins:{
+        title:{display:true,text:'Weekly Incident Count',font:{size:14,weight:'bold'}},
+        legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}},
+        tooltip:{callbacks:{title:ctx=>ctx[0].label.replace('\n',' — ')}}
+      },
+      scales:{x:{stacked:true,ticks:{font:{size:10},maxRotation:0}},y:{stacked:true,beginAtZero:true,ticks:{stepSize:5}}}
+    },
+    plugins:[{id:'dayLines',afterDraw(chart){
+      const{ctx,chartArea:{top,bottom},scales:{x}}=chart;
+      ctx.save();ctx.strokeStyle='#d1d5db';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+      dayBoundaries.forEach(b=>{const xp=x.getPixelForValue(b);ctx.beginPath();ctx.moveTo(xp,top);ctx.lineTo(xp,bottom);ctx.stroke();});
+      ctx.restore();
+    }}]
   });
 }
 
-function renderRefTable(rows) {
-  const countEl = document.getElementById('refCount');
-  if (countEl) countEl.textContent = `${rows.length} rows`;
+// ── Tracking Config ───────────────────────────────────────────────────────────
+async function syncTrackingMap(){
+  try{
+    const res=await fetch(`${API}/api/tracking`);
+    allTrackingRows=await res.json();
+    trackingMap={};
+    allTrackingRows.forEach(r=>{trackingMap[r.tracking_code]=r;});
+    populateRefFilters();
+    renderRefTable(getFilteredSortedRef());
+    if(incRows.length){renderINCRows('acu');renderINCRows('vpos');}
+  }catch(e){toast('Failed to sync tracking data',true);}
+}
+function loadTracking(){syncTrackingMap();}
 
-  const tbody = document.getElementById('refBody');
-  tbody.innerHTML = rows.map(r => `
+function populateRefFilters(){
+  const ciSet=[...new Set(allTrackingRows.map(r=>r.ci))].sort();
+  const ciSel=document.getElementById('refCiFilter');
+  const cur=ciSel?ciSel.value:'';
+  if(ciSel) ciSel.innerHTML='<option value="">All CIs</option>'+ciSet.map(c=>`<option ${cur===c?'selected':''}>${esc(c)}</option>`).join('');
+}
+
+function getFilteredSortedRef(){
+  let rows=[...allTrackingRows];
+  const{text,type,ci}=refFilter;
+  if(type) rows=rows.filter(r=>r.type===type);
+  if(ci)   rows=rows.filter(r=>r.ci===ci);
+  if(text){const lo=text.toLowerCase();rows=rows.filter(r=>r.tracking_code.toLowerCase().includes(lo)||r.category.toLowerCase().includes(lo)||r.ci.toLowerCase().includes(lo));}
+  if(refSort.col){rows.sort((a,b)=>{const av=String(a[refSort.col]||'').toLowerCase(),bv=String(b[refSort.col]||'').toLowerCase();return refSort.asc?av.localeCompare(bv):bv.localeCompare(av);});}
+  return rows;
+}
+
+function sortRef(col){
+  if(refSort.col===col) refSort.asc=!refSort.asc; else{refSort.col=col;refSort.asc=true;}
+  renderRefTable(getFilteredSortedRef());
+  document.querySelectorAll('#refHead th[data-col]').forEach(th=>{
+    const icon=th.querySelector('.sort-icon');
+    if(!icon) return;
+    icon.textContent=refSort.col===th.dataset.col?(refSort.asc?'↑':'↓'):'⇅';
+  });
+}
+
+function renderRefTable(rows){
+  const countEl=document.getElementById('refCount');
+  if(countEl) countEl.textContent=`${rows.length} rows`;
+  document.getElementById('refBody').innerHTML=rows.map(r=>`
     <tr data-id="${r.id}">
       <td><span class="badge b-${r.type.toLowerCase()}">${r.type}</span></td>
       <td style="max-width:220px;white-space:normal">${esc(r.ci)}</td>
       <td><b>${esc(r.tracking_code)}</b></td>
       <td style="max-width:260px;white-space:normal">${esc(r.category)}</td>
       <td>
-        <button class="btn btn-ghost btn-sm" onclick="editRefRow(${r.id}, this)">✏ Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteRefRow(${r.id})">🗑</button>
+        <button class="btn btn-ghost btn-sm" onclick="editRefRow(${r.id},this)">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRefRow(${r.id})">🗑️</button>
       </td>
-    </tr>`).join('') || `<tr><td colspan="5" class="empty">No matching rows</td></tr>`;
+    </tr>`).join('')||`<tr><td colspan="5" class="empty">No matching rows</td></tr>`;
 }
 
-function getCiOptions(selected='') {
-  const ciList = [...new Set(allTrackingRows.map(r => r.ci))].sort();
-  const opts = ciList.map(c => `<option ${selected===c?'selected':''}>${esc(c)}</option>`).join('');
-  return `<option value="">-- select CI --</option>${opts}<option value="__custom__">+ Custom...</option>`;
+function getCiOptions(selected=''){
+  const ciList=[...new Set(allTrackingRows.map(r=>r.ci))].sort();
+  return `<option value="">-- select CI --</option>${ciList.map(c=>`<option ${selected===c?'selected':''}>${esc(c)}</option>`).join('')}<option value="__custom__">+ Custom...</option>`;
 }
 
-function editRefRow(id, btn) {
-  const tr = btn.closest('tr');
-  const cells = tr.querySelectorAll('td');
-  const curType = cells[0].textContent.trim();
-  const curCI   = cells[1].textContent.trim();
-  const curCode = cells[2].textContent.trim();
-  const curCat  = cells[3].textContent.trim();
-
-  cells[0].innerHTML = `<select class="ref-type-sel" style="width:90px">
-    <option ${curType==='SYSTEM'?'selected':''}>SYSTEM</option>
-    <option ${curType==='OPS'?'selected':''}>OPS</option>
-    <option ${curType==='PE'?'selected':''}>PE</option>
-  </select>`;
-  cells[1].innerHTML = `<select class="ref-ci-sel" style="min-width:160px;font-size:12px">
-    ${getCiOptions(curCI)}
-  </select>
-  <input type="text" class="ref-ci-custom" placeholder="Custom CI..." style="display:none;margin-top:4px;width:100%">`;
-  cells[2].innerHTML = `<input type="text" class="ref-code-inp" value="${esc(curCode)}">`;
-  cells[3].innerHTML = `<input type="text" class="ref-cat-inp" value="${esc(curCat)}">`;
-  cells[4].innerHTML = `
-    <button class="btn btn-success btn-sm" onclick="saveRefRow(${id}, this)">💾 Save</button>
-    <button class="btn btn-ghost btn-sm" onclick="loadTracking()">✕</button>`;
-
-  // toggle custom input
-  cells[1].querySelector('.ref-ci-sel').addEventListener('change', function() {
-    const customInp = cells[1].querySelector('.ref-ci-custom');
-    customInp.style.display = this.value === '__custom__' ? 'block' : 'none';
-  });
+function editRefRow(id,btn){
+  const tr=btn.closest('tr'), cells=tr.querySelectorAll('td');
+  const curType=cells[0].textContent.trim(), curCI=cells[1].textContent.trim();
+  const curCode=cells[2].textContent.trim(), curCat=cells[3].textContent.trim();
+  cells[0].innerHTML=`<select class="ref-type-sel" style="width:90px"><option ${curType==='SYSTEM'?'selected':''}>SYSTEM</option><option ${curType==='OPS'?'selected':''}>OPS</option><option ${curType==='PE'?'selected':''}>PE</option></select>`;
+  cells[1].innerHTML=`<select class="ref-ci-sel" style="min-width:160px;font-size:12px">${getCiOptions(curCI)}</select><input type="text" class="ref-ci-custom" placeholder="Custom CI..." style="display:none;margin-top:4px;width:100%">`;
+  cells[2].innerHTML=`<input type="text" class="ref-code-inp" value="${esc(curCode)}">`;
+  cells[3].innerHTML=`<input type="text" class="ref-cat-inp" value="${esc(curCat)}">`;
+  cells[4].innerHTML=`<button class="btn btn-success btn-sm" onclick="saveRefRow(${id},this)">💾 Save</button> <button class="btn btn-ghost btn-sm" onclick="loadTracking()">✕</button>`;
+  cells[1].querySelector('.ref-ci-sel').addEventListener('change',function(){cells[1].querySelector('.ref-ci-custom').style.display=this.value==='__custom__'?'block':'none';});
 }
 
-// alias so nav tab click still works
-function loadTracking() { syncTrackingMap(); }
-
-async function saveRefRow(id, btn) {
-  const tr    = btn.closest('tr');
-  const cells = tr.querySelectorAll('td');
-
-  const typeSel    = cells[0].querySelector('select');
-  const ciSel      = cells[1].querySelector('.ref-ci-sel');
-  const ciCustom   = cells[1].querySelector('.ref-ci-custom');
-  const codeInp    = cells[2].querySelector('input');
-  const catInp     = cells[3].querySelector('input');
-
-  const ciVal = ciSel
-    ? (ciSel.value === '__custom__' ? ciCustom?.value.trim() : ciSel.value)
-    : cells[1].querySelector('input')?.value.trim();
-
-  const body = {
-    id,
-    type:          typeSel?.value || 'SYSTEM',
-    ci:            ciVal || '',
-    tracking_code: codeInp?.value.trim() || '',
-    category:      catInp?.value.trim()  || '',
-  };
-  if (!body.tracking_code || !body.ci || !body.category) { toast('All fields required', true); return; }
-  try {
-    const res = await fetch(`${API}/api/tracking`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if (!res.ok) throw new Error((await res.json()).detail);
-    toast('Saved!');
-    syncTrackingMap();
-  } catch(e) { toast('Save failed: '+e.message, true); }
+async function saveRefRow(id,btn){
+  const tr=btn.closest('tr'), cells=tr.querySelectorAll('td');
+  const ciSel=cells[1].querySelector('.ref-ci-sel'), ciCustom=cells[1].querySelector('.ref-ci-custom');
+  const ciVal=ciSel?(ciSel.value==='__custom__'?ciCustom?.value.trim():ciSel.value):cells[1].querySelector('input')?.value.trim();
+  const body={id,type:cells[0].querySelector('select')?.value||'SYSTEM',ci:ciVal||'',tracking_code:cells[2].querySelector('input')?.value.trim()||'',category:cells[3].querySelector('input')?.value.trim()||''};
+  if(!body.tracking_code||!body.ci||!body.category){toast('All fields required',true);return;}
+  try{
+    const res=await fetch(`${API}/api/tracking`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!res.ok) throw new Error((await res.json()).detail);
+    toast('Saved!'); syncTrackingMap();
+  }catch(e){toast('Save failed: '+e.message,true);}
 }
 
-async function deleteRefRow(id) {
-  if (!confirm('Delete this tracking code?')) return;
-  await fetch(`${API}/api/tracking/${id}`, {method:'DELETE'});
-  allTrackingRows = allTrackingRows.filter(r => r.id !== id);
-  // remove from trackingMap too
-  Object.keys(trackingMap).forEach(k => { if (trackingMap[k].id === id) delete trackingMap[k]; });
-  populateRefFilters();
-  renderRefTable(getFilteredSortedRef());
-  if (incRows.length) renderINCRows();
+async function deleteRefRow(id){
+  if(!confirm('Delete this tracking code?')) return;
+  await fetch(`${API}/api/tracking/${id}`,{method:'DELETE'});
+  allTrackingRows=allTrackingRows.filter(r=>r.id!==id);
+  Object.keys(trackingMap).forEach(k=>{if(trackingMap[k].id===id) delete trackingMap[k];});
+  populateRefFilters(); renderRefTable(getFilteredSortedRef());
+  if(incRows.length){renderINCRows('acu');renderINCRows('vpos');}
   toast('Deleted');
 }
 
-document.getElementById('addRowBtn').addEventListener('click', () => {
-  const tbody = document.getElementById('refBody');
-  const tr = document.createElement('tr');
-  tr.setAttribute('data-id', '');
-  const ciList = [...new Set(allTrackingRows.map(r => r.ci))].sort();
-  tr.innerHTML = `
+document.getElementById('addRowBtn').addEventListener('click',()=>{
+  const tbody=document.getElementById('refBody');
+  const ciList=[...new Set(allTrackingRows.map(r=>r.ci))].sort();
+  const tr=document.createElement('tr');
+  tr.setAttribute('data-id','');
+  tr.innerHTML=`
     <td><select class="ref-type-sel" style="width:90px"><option>SYSTEM</option><option>OPS</option><option>PE</option></select></td>
-    <td>
-      <select class="ref-ci-sel" style="min-width:160px;font-size:12px">
-        <option value="">-- select CI --</option>
-        ${ciList.map(c=>`<option>${esc(c)}</option>`).join('')}
-        <option value="__custom__">+ Custom...</option>
-      </select>
-      <input type="text" class="ref-ci-custom" placeholder="Custom CI..." style="display:none;margin-top:4px;width:100%">
-    </td>
+    <td><select class="ref-ci-sel" style="min-width:160px;font-size:12px"><option value="">-- select CI --</option>${ciList.map(c=>`<option>${esc(c)}</option>`).join('')}<option value="__custom__">+ Custom...</option></select><input type="text" class="ref-ci-custom" placeholder="Custom CI..." style="display:none;margin-top:4px;width:100%"></td>
     <td><input type="text" class="ref-code-inp" placeholder="APOP001"></td>
     <td><input type="text" class="ref-cat-inp" placeholder="Category label"></td>
-    <td>
-      <button class="btn btn-success btn-sm" onclick="saveRefRow(null, this)">💾 Save</button>
-      <button class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove()">✕</button>
-    </td>`;
+    <td><button class="btn btn-success btn-sm" onclick="saveRefRow(null,this)">💾 Save</button> <button class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove()">✕</button></td>`;
   tbody.prepend(tr);
-  tr.querySelector('.ref-ci-sel').addEventListener('change', function() {
-    tr.querySelector('.ref-ci-custom').style.display = this.value === '__custom__' ? 'block' : 'none';
-  });
+  tr.querySelector('.ref-ci-sel').addEventListener('change',function(){tr.querySelector('.ref-ci-custom').style.display=this.value==='__custom__'?'block':'none';});
 });
 
-document.getElementById('refSearch').addEventListener('input', e => {
-  refFilter.text = e.target.value;
-  renderRefTable(getFilteredSortedRef());
-});
-document.getElementById('refTypeFilter').addEventListener('change', e => {
-  refFilter.type = e.target.value;
-  renderRefTable(getFilteredSortedRef());
-});
-document.getElementById('refCiFilter').addEventListener('change', e => {
-  refFilter.ci = e.target.value;
-  renderRefTable(getFilteredSortedRef());
-});
-document.getElementById('refClearBtn').addEventListener('click', () => {
-  refFilter = {text:'', type:'', ci:''};
-  document.getElementById('refSearch').value = '';
-  document.getElementById('refTypeFilter').value = '';
-  document.getElementById('refCiFilter').value = '';
+document.getElementById('refSearch').addEventListener('input',e=>{refFilter.text=e.target.value;renderRefTable(getFilteredSortedRef());});
+document.getElementById('refTypeFilter').addEventListener('change',e=>{refFilter.type=e.target.value;renderRefTable(getFilteredSortedRef());});
+document.getElementById('refCiFilter').addEventListener('change',e=>{refFilter.ci=e.target.value;renderRefTable(getFilteredSortedRef());});
+document.getElementById('refClearBtn').addEventListener('click',()=>{
+  refFilter={text:'',type:'',ci:''};
+  document.getElementById('refSearch').value='';
+  document.getElementById('refTypeFilter').value='';
+  document.getElementById('refCiFilter').value='';
   renderRefTable(getFilteredSortedRef());
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function empty(msg='No data') { return `<div class="empty">${msg}</div>`; }
-function toast(msg, err=false) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.background = err ? '#dc2626' : '#1f2937';
-  t.style.display = 'block';
-  clearTimeout(t._to);
-  t._to = setTimeout(() => t.style.display='none', 3000);
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function empty(msg='No data'){return `<div class="empty">${msg}</div>`;}
+function toast(msg,err=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.background=err?'#dc2626':'#1f2937';
+  t.style.display='block'; clearTimeout(t._to);
+  t._to=setTimeout(()=>t.style.display='none',3000);
 }
-function setLoading(spinId, labelId, on, label) {
-  document.getElementById(spinId).style.display = on ? 'block' : 'none';
-  document.getElementById(labelId).textContent  = label;
+function setLoading(spinId,labelId,on,label){
+  document.getElementById(spinId).style.display=on?'block':'none';
+  document.getElementById(labelId).textContent=label;
 }
 </script>
 </body>
