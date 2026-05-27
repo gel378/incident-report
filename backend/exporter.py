@@ -1,9 +1,10 @@
 import io
 from openpyxl import Workbook
 from openpyxl.styles import (
-    Font, PatternFill, Alignment, Border, Side, numbers
+    Font, PatternFill, Alignment, Border, Side
 )
 from openpyxl.utils import get_column_letter
+from openpyxl.chart import BarChart, Reference, Series
 import pandas as pd
 
 DIVISIONS = [
@@ -52,8 +53,11 @@ def _freeze(ws, cell="B3"):
 
 # ── Tab builders ────────────────────────────────────────────────────────────
 
-def write_inc(wb: Workbook, inc: pd.DataFrame):
-    ws = wb.create_sheet("INC")
+def write_inc(ws_or_wb, inc: pd.DataFrame, sheet_name: str = "INC"):
+    if isinstance(ws_or_wb, Workbook):
+        ws = ws_or_wb.create_sheet(sheet_name)
+    else:
+        ws = ws_or_wb
     cols = list(inc.columns)
     _apply_header(ws, 1, cols, HDR_FILL, HDR_FONT)
     for r_idx, row in enumerate(inc.itertuples(index=False), 2):
@@ -115,8 +119,70 @@ def _write_category_sheet(wb: Workbook, sheet_name: str, df: pd.DataFrame, value
     _freeze(ws, "C3")
 
 
-def write_acupick_categories(wb: Workbook, df: pd.DataFrame):
-    _write_category_sheet(wb, "Acupick Incident Categories", df, value_col="count")
+def write_acupick_categories(wb: Workbook, categories: dict):
+    ws = wb.create_sheet("Acupick Incident Categories")
+    TYPES_LABELS = {"OPS": "Operations Issue", "SYSTEM": "System Issue", "PE": "Product Enhancement"}
+    row_num = 1
+
+    for type_key, type_label in TYPES_LABELS.items():
+        df = categories.get(type_key, pd.DataFrame())
+        if df is None or len(df) == 0:
+            continue
+
+        # Section header row
+        ws.cell(row=row_num, column=1, value="")
+        label_cell = ws.cell(row=row_num, column=2, value=type_label)
+        label_cell.font = BOLD_FONT
+        label_cell.fill = HDR_FILL
+        label_cell.font = HDR_FONT
+        ws.merge_cells(start_row=row_num, start_column=2, end_row=row_num, end_column=2 + len(DIVISIONS))
+        row_num += 1
+
+        # Column headers
+        headers = ["", "Category"] + DIVISIONS + ["Total"]
+        for c_idx, val in enumerate(headers, 1):
+            cell = ws.cell(row=row_num, column=c_idx, value=val)
+            cell.fill = SUB_FILL; cell.font = SUB_FONT
+            cell.border = _thin_border(); cell.alignment = CTR_ALIGN
+        row_num += 1
+
+        # Data rows
+        summary_row = {d: 0 for d in DIVISIONS}
+        summary_row["Total"] = 0
+        for _, r in df.iterrows():
+            ws.cell(row=row_num, column=1, value=r["Code"]).font = BOLD_FONT
+            ws.cell(row=row_num, column=1).border = _thin_border()
+            ws.cell(row=row_num, column=1).alignment = CTR_ALIGN
+            ws.cell(row=row_num, column=2, value=r["Category"]).font = NORM_FONT
+            ws.cell(row=row_num, column=2).border = _thin_border()
+            for c_idx, div in enumerate(DIVISIONS, 3):
+                val = int(r.get(div, 0))
+                cell = ws.cell(row=row_num, column=c_idx, value=val)
+                cell.font = NORM_FONT; cell.border = _thin_border(); cell.alignment = CTR_ALIGN
+                summary_row[div] += val
+            tot = int(r.get("Total", 0))
+            ws.cell(row=row_num, column=3+len(DIVISIONS), value=tot).font = BOLD_FONT
+            ws.cell(row=row_num, column=3+len(DIVISIONS)).border = _thin_border()
+            ws.cell(row=row_num, column=3+len(DIVISIONS)).alignment = CTR_ALIGN
+            summary_row["Total"] += tot
+            row_num += 1
+
+        # Summary row
+        ws.cell(row=row_num, column=1, value="")
+        ws.cell(row=row_num, column=2, value="Summary").font = BOLD_FONT
+        ws.cell(row=row_num, column=2).fill = SUB_FILL
+        ws.cell(row=row_num, column=2).border = _thin_border()
+        for c_idx, div in enumerate(DIVISIONS, 3):
+            cell = ws.cell(row=row_num, column=c_idx, value=summary_row[div])
+            cell.font = BOLD_FONT; cell.fill = SUB_FILL
+            cell.border = _thin_border(); cell.alignment = CTR_ALIGN
+        tot_cell = ws.cell(row=row_num, column=3+len(DIVISIONS), value=summary_row["Total"])
+        tot_cell.font = BOLD_FONT; tot_cell.fill = SUB_FILL
+        tot_cell.border = _thin_border(); tot_cell.alignment = CTR_ALIGN
+        row_num += 2  # blank row between sections
+
+    _auto_width(ws)
+    _freeze(ws, "C3")
 
 
 def write_acupick(wb: Workbook, df: pd.DataFrame):
@@ -183,15 +249,82 @@ def write_summary(wb: Workbook, summary: dict):
 
 # ── Main entry point ─────────────────────────────────────────────────────────
 
-def build_workbook(processed: dict) -> bytes:
-    wb = Workbook()
-    wb.remove(wb.active)          # remove default empty sheet
+def write_vpos_categories(wb: Workbook, categories: dict):
+    ws = wb.create_sheet("VPOS Incident Categories")
+    TYPES_LABELS = {"OPS": "Operations Issue", "SYSTEM": "System Issue", "PE": "Product Enhancement"}
+    row_num = 1
 
-    # Build in desired tab order
-    write_ops_issues(wb, processed["ops_issues"])
-    write_summary(wb, processed["summary"])
-    write_acupick_categories(wb, processed["categories"])
-    write_inc(wb, processed["inc"])
+    for type_key, type_label in TYPES_LABELS.items():
+        df = categories.get(type_key, pd.DataFrame())
+        if df is None or len(df) == 0:
+            continue
+
+        ws.cell(row=row_num, column=1, value="")
+        label_cell = ws.cell(row=row_num, column=2, value=type_label)
+        label_cell.fill = HDR_FILL
+        label_cell.font = HDR_FONT
+        ws.merge_cells(start_row=row_num, start_column=2, end_row=row_num, end_column=2+len(DIVISIONS))
+        row_num += 1
+
+        headers = ["", "Category"] + DIVISIONS + ["Total"]
+        for c_idx, val in enumerate(headers, 1):
+            cell = ws.cell(row=row_num, column=c_idx, value=val)
+            cell.fill = SUB_FILL; cell.font = SUB_FONT
+            cell.border = _thin_border(); cell.alignment = CTR_ALIGN
+        row_num += 1
+
+        summary_row = {d: 0 for d in DIVISIONS}
+        summary_row["Total"] = 0
+        for _, r in df.iterrows():
+            ws.cell(row=row_num, column=1, value=r["Code"]).font = BOLD_FONT
+            ws.cell(row=row_num, column=1).border = _thin_border()
+            ws.cell(row=row_num, column=1).alignment = CTR_ALIGN
+            ws.cell(row=row_num, column=2, value=r["Category"]).font = NORM_FONT
+            ws.cell(row=row_num, column=2).border = _thin_border()
+            for c_idx, div in enumerate(DIVISIONS, 3):
+                val = int(r.get(div, 0))
+                cell = ws.cell(row=row_num, column=c_idx, value=val)
+                cell.font = NORM_FONT; cell.border = _thin_border(); cell.alignment = CTR_ALIGN
+                summary_row[div] += val
+            tot = int(r.get("Total", 0))
+            ws.cell(row=row_num, column=3+len(DIVISIONS), value=tot).font = BOLD_FONT
+            ws.cell(row=row_num, column=3+len(DIVISIONS)).border = _thin_border()
+            ws.cell(row=row_num, column=3+len(DIVISIONS)).alignment = CTR_ALIGN
+            summary_row["Total"] += tot
+            row_num += 1
+
+        ws.cell(row=row_num, column=1, value="")
+        ws.cell(row=row_num, column=2, value="Summary").font = BOLD_FONT
+        ws.cell(row=row_num, column=2).fill = SUB_FILL
+        ws.cell(row=row_num, column=2).border = _thin_border()
+        for c_idx, div in enumerate(DIVISIONS, 3):
+            cell = ws.cell(row=row_num, column=c_idx, value=summary_row[div])
+            cell.font = BOLD_FONT; cell.fill = SUB_FILL
+            cell.border = _thin_border(); cell.alignment = CTR_ALIGN
+        tot_cell = ws.cell(row=row_num, column=3+len(DIVISIONS), value=summary_row["Total"])
+        tot_cell.font = BOLD_FONT; tot_cell.fill = SUB_FILL
+        tot_cell.border = _thin_border(); tot_cell.alignment = CTR_ALIGN
+        row_num += 2
+
+    _auto_width(ws)
+    _freeze(ws, "C3")
+
+
+def build_workbook(processed: dict, report_type: str = "acupick") -> bytes:
+    wb = Workbook()
+    wb.remove(wb.active)
+
+    if report_type == "vpos":
+        vpos_inc = processed["vpos_inc"] if isinstance(processed.get("vpos_inc"), pd.DataFrame) and len(processed["vpos_inc"]) else processed["inc"]
+        write_vpos_categories(wb, processed["vpos_categories"])
+        write_ops_issues(wb, processed["vpos_ops"])
+        write_inc(wb, vpos_inc, "INC")
+    else:
+        acu_inc = processed["acupick_inc"] if isinstance(processed.get("acupick_inc"), pd.DataFrame) and len(processed["acupick_inc"]) else processed["inc"]
+        write_ops_issues(wb, processed["acupick_ops"])
+        write_summary(wb, processed["summary"])
+        write_acupick_categories(wb, processed["acupick_categories"])
+        write_inc(wb, acu_inc, "INC")
 
     buf = io.BytesIO()
     wb.save(buf)

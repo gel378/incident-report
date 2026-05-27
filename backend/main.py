@@ -16,9 +16,6 @@ from database import (
 from processor import process_csv
 from exporter import build_workbook
 
-BASE_DIR     = Path(__file__).parent
-FRONTEND_DIR = BASE_DIR.parent / "frontend"
-
 app = FastAPI(title="Incident Report Generator")
 init_db()
 
@@ -29,10 +26,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+BASE_DIR     = Path(__file__).parent
+FRONTEND_DIR = BASE_DIR.parent / "frontend"
+
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def parse_upload(filename: str, contents: bytes) -> pd.DataFrame:
     name = filename.lower()
@@ -52,19 +50,16 @@ def parse_upload(filename: str, contents: bytes) -> pd.DataFrame:
 
 
 def df_to_json(frame: pd.DataFrame) -> list:
+    if frame is None or len(frame) == 0:
+        return []
     return json.loads(frame.to_json(orient="records", date_format="iso", default_handler=str))
 
 
-# ── Static / root ─────────────────────────────────────────────────────────────
+def json_serial(obj):
+    if isinstance(obj, (datetime, date, pd.Timestamp)):
+        return obj.strftime("%Y-%m-%d %H:%M:%S") if hasattr(obj, "hour") else str(obj)
+    raise TypeError(f"Type {type(obj)} not serializable")
 
-@app.get("/api/debug/tracking/{code}")
-async def debug_tracking(code: str):
-    from database import get_conn
-    with get_conn() as conn:
-        row = conn.execute(
-            "SELECT * FROM tracking_ref WHERE tracking_code=?", (code,)
-        ).fetchone()
-    return dict(row) if row else {"error": "not found"}
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
@@ -85,7 +80,7 @@ async def root():
         return HTMLResponse(f"<pre>Error: {e}</pre>", status_code=500)
 
 
-# ── Tracking reference CRUD ───────────────────────────────────────────────────
+# ── Tracking CRUD ─────────────────────────────────────────────────────────────
 
 class TrackingEntry(BaseModel):
     id:            int | None = None
@@ -115,7 +110,7 @@ async def api_delete_tracking(id: int):
     return {"deleted": id}
 
 
-# ── Incident processing ───────────────────────────────────────────────────────
+# ── Preview ───────────────────────────────────────────────────────────────────
 
 @app.post("/api/preview")
 async def preview(
@@ -138,6 +133,9 @@ async def preview(
         traceback.print_exc()
         raise HTTPException(500, f"Processing error: {e}")
 
+    def serialize_categories(cats: dict) -> dict:
+        return {t: df_to_json(df) for t, df in cats.items()}
+
     return JSONResponse({
         "stats": {
             "total":  len(processed["inc"]),
@@ -145,10 +143,13 @@ async def preview(
             "ops":    int((processed["inc"]["Type"] == "OPS").sum()),
             "pe":     int((processed["inc"]["Type"] == "PE").sum()),
         },
-        "inc":        df_to_json(processed["inc"]),
-        "categories": df_to_json(processed["categories"]),
-        "acupick":    df_to_json(processed["acupick"]),
-        "ops_issues": df_to_json(processed["ops_issues"]),
+        "inc":                 df_to_json(processed["inc"]),
+        "acupick_inc":         df_to_json(processed["acupick_inc"]),
+        "vpos_inc":            df_to_json(processed["vpos_inc"]),
+        "acupick_categories":  serialize_categories(processed["acupick_categories"]),
+        "acupick_ops":         df_to_json(processed["acupick_ops"]),
+        "vpos_categories":     serialize_categories(processed["vpos_categories"]),
+        "vpos_ops":            df_to_json(processed["vpos_ops"]),
         "summary": {
             "date_from": processed["summary"]["date_from"],
             "date_to":   processed["summary"]["date_to"],
@@ -159,11 +160,14 @@ async def preview(
     })
 
 
+# ── Export ────────────────────────────────────────────────────────────────────
+
 @app.post("/api/export")
 async def export(
     file: UploadFile = File(...),
-    date_from: str = Form(default=str(date.today())),
-    date_to:   str = Form(default=str(date.today())),
+    date_from:   str = Form(default=str(date.today())),
+    date_to:     str = Form(default=str(date.today())),
+    report_type: str = Form(default="acupick"),
 ):
     contents = await file.read()
     try:
@@ -173,10 +177,23 @@ async def export(
     except Exception as e:
         raise HTTPException(400, f"Could not read file: {e}")
 
-    processed  = process_csv(df, date_from, date_to)
-    xlsx_bytes = build_workbook(processed)
+    try:
+        processed = process_csv(df, date_from, date_to)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(500, f"Processing error: {e}")
 
-    filename = f"incident_report_{date_from}_to_{date_to}.xlsx"
+    try:
+        print(f"[DEBUG] processed keys: {list(processed.keys())}")
+        print(f"[DEBUG] report_type: {report_type}")
+        xlsx_bytes = build_workbook(processed, report_type)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(500, f"Export error: {e}")
+
+    filename = f"{report_type}_incident_report_{date_from}_to_{date_to}.xlsx"
     return StreamingResponse(
         io.BytesIO(xlsx_bytes),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
