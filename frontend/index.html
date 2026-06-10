@@ -67,8 +67,11 @@ td input,td select{padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;fo
 .ref-table td{white-space:normal}
 .toast{position:fixed;bottom:24px;right:24px;background:#1f2937;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;display:none;z-index:99}
 .empty{text-align:center;padding:40px;color:#9ca3af;font-size:13px}
-.spinner{display:none;width:16px;height:16px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+/* Multi-select */
+.row-selected td{background:#ede9fe !important}
+.bulk-bar{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 16px;border-radius:8px;display:none;align-items:center;gap:10px;z-index:98;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.bulk-bar.visible{display:flex}
+#acu-incBody.edit-mode tr, #vpos-incBody.edit-mode tr{user-select:none}
 </style>
 </head>
 <body>
@@ -170,7 +173,7 @@ td input,td select{padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;fo
           <th data-col="ci" onclick="sortRef('ci')">Configuration Item <span class="sort-icon">⇅</span></th>
           <th data-col="tracking_code" onclick="sortRef('tracking_code')">Tracking Code <span class="sort-icon">⇅</span></th>
           <th data-col="category" onclick="sortRef('category')">Category <span class="sort-icon">⇅</span></th>
-          <th style="width:150px">Actions</th>
+          <th style="width:130px">Actions</th>
         </tr></thead>
         <tbody id="refBody"></tbody>
       </table>
@@ -178,10 +181,28 @@ td input,td select{padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;fo
   </div>
 </div>
 
+<div class="bulk-bar" id="bulkBar">
+  <span id="bulkCount" style="white-space:nowrap;font-weight:600">0 rows selected</span>
+  <span style="color:#6b7280">|</span>
+  <span style="white-space:nowrap">Bulk update:</span>
+  <select id="bulkType" style="font-size:12px;padding:4px 8px;border-radius:6px;border:none;background:#374151;color:#fff">
+    <option value="">Type...</option>
+    <option>SYSTEM</option><option>OPS</option><option>PE</option>
+  </select>
+  <select id="bulkCI" style="font-size:12px;padding:4px 8px;border-radius:6px;border:none;background:#374151;color:#fff;max-width:180px">
+    <option value="">Configuration Item...</option>
+  </select>
+  <select id="bulkTracking" style="font-size:12px;padding:4px 8px;border-radius:6px;border:none;background:#374151;color:#fff;max-width:200px">
+    <option value="">Tracking...</option>
+  </select>
+  <input id="bulkParent" type="text" placeholder="Parent Incident..." style="font-size:12px;padding:4px 8px;border-radius:6px;border:none;background:#374151;color:#fff;width:130px">
+  <button class="btn btn-sm" style="background:#4f46e5;color:#fff;border:none" onclick="bulkApply()">✔ Apply</button>
+  <button class="btn btn-sm" style="background:#374151;color:#9ca3af;border:none" onclick="clearSelection()">✕</button>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
-const API = '';
+const API = '/IRT';
 const DIVS = ['Denver','Haggen','Intermountain','Jewel-Osco','MidAtlantic','NorCal','Portland','Seattle','Shaws','SoCal','Southern','Southwest','United'];
 const TYPES_LIST = ['SYSTEM','OPS','PE'];
 const VPOS_CI = 'VPOS - Virtual Point of Sale System (OSVP)';
@@ -240,7 +261,12 @@ const fi=document.getElementById('fileInput');
 drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('over')});
 drop.addEventListener('dragleave',()=>drop.classList.remove('over'));
 drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');setFile(e.dataTransfer.files[0])});
-fi.addEventListener('change',e=>{if(e.target.files[0]) setFile(e.target.files[0]);});
+fi.addEventListener('change', function(e){
+  console.log('[DEBUG] file input change fired', e.target.files);
+  const f = e.target.files && e.target.files[0];
+  console.log('[DEBUG] file:', f ? f.name : 'none');
+  if(f) setFile(f);
+});
 
 function setFile(f){
   if(!f||!f.name.match(/\.(csv|xlsx|xls)$/i)){toast('Please upload a .csv or .xlsx file',true);return;}
@@ -283,29 +309,33 @@ document.getElementById('previewBtn').addEventListener('click', async()=>{
 
 // ── Export ────────────────────────────────────────────────────────────────────
 async function doExport(reportType, spinId, labelId, defaultLabel){
-  if(!uploadedFile) return;
-  setLoading(spinId,labelId,true,'Generating…');
-  const fd=new FormData();
-  fd.append('file',uploadedFile);
-  fd.append('date_from',document.getElementById('dateFrom').value);
-  fd.append('date_to',document.getElementById('dateTo').value);
-  fd.append('report_type',reportType);
+  if(!incRows.length){ toast('Please build a preview first', true); return; }
+  setLoading(spinId, labelId, true, 'Generating…');
   try{
-    const res=await fetch(`${API}/api/export`,{method:'POST',body:fd});
+    const res = await fetch(`${API}/api/export-edited`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        report_type: reportType,
+        date_from:   document.getElementById('dateFrom').value,
+        date_to:     document.getElementById('dateTo').value,
+        inc:         incRows,
+      })
+    });
     if(!res.ok){
-      const text=await res.text();
+      const text = await res.text();
       let msg;
-      try{msg=JSON.parse(text).detail;}catch{msg=text.slice(0,300);}
+      try{ msg = JSON.parse(text).detail; } catch{ msg = text.slice(0,300); }
       throw new Error(msg);
     }
-    const blob=await res.blob();
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download=`${reportType}_incident_report_${document.getElementById('dateFrom').value}_to_${document.getElementById('dateTo').value}.xlsx`;
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${reportType}_incident_report_${document.getElementById('dateFrom').value}_to_${document.getElementById('dateTo').value}.xlsx`;
     a.click();
     toast('Downloaded!');
-  }catch(e){toast('Export error: '+e.message,true);}
-  finally{setLoading(spinId,labelId,false,defaultLabel);}
+  }catch(e){ toast('Export error: '+e.message, true); }
+  finally{ setLoading(spinId, labelId, false, defaultLabel); }
 }
 document.getElementById('exportAcupickBtn').addEventListener('click',()=>doExport('acupick','spinA','exportAcupickLabel','⬇ Export Acupick XLSX'));
 document.getElementById('exportVposBtn').addEventListener('click',()=>doExport('vpos','spinV','exportVposLabel','⬇ Export VPOS XLSX'));
@@ -313,6 +343,7 @@ document.getElementById('exportVposBtn').addEventListener('click',()=>doExport('
 // ── Render preview ────────────────────────────────────────────────────────────
 function renderPreview(d){
   updateStats();
+  populateBulkBar();
   // Acupick sub-tabs
   buildSubTabs('acuTabBar','acuTabPanes',[
     {label:'INC', render:()=>renderINCTab('acu')},
@@ -344,6 +375,14 @@ function buildSubTabs(barId, panesId, tabs, panePrefix){
   });
   // render all panes
   tabs.forEach(t=>t.render());
+}
+
+function populateBulkBar(){
+  const ciList=[...new Set(Object.values(trackingMap).map(r=>r.ci))].sort();
+  const ciSel=document.getElementById('bulkCI');
+  if(ciSel) ciSel.innerHTML='<option value="">Configuration Item...</option>'+ciList.map(c=>'<option>'+esc(c)+'</option>').join('');
+  const tkSel=document.getElementById('bulkTracking');
+  if(tkSel) tkSel.innerHTML='<option value="">Tracking...</option>'+Object.keys(trackingMap).sort().map(c=>'<option value="'+esc(c)+'">'+esc(c)+' - '+esc((trackingMap[c]&&trackingMap[c].category)||'')+'</option>').join('');
 }
 
 function updateStats(){
@@ -424,6 +463,7 @@ function renderINCTab(section){
   document.getElementById(`${section}-incEditBtn`).addEventListener('click',()=>{
     incRowsSnapshot=JSON.parse(JSON.stringify(incRows));
     if(section==='acu') acuEditMode=true; else vposEditMode=true;
+    document.getElementById(`${section}-incBody`).classList.add('edit-mode');
     document.getElementById(`${section}-incEditBtn`).style.display='none';
     document.getElementById(`${section}-incSaveBtn`).style.display='inline-flex';
     document.getElementById(`${section}-incCancelBtn`).style.display='inline-flex';
@@ -447,6 +487,7 @@ function renderINCTab(section){
       }
     });
     if(section==='acu') acuEditMode=false; else vposEditMode=false;
+    document.getElementById(`${section}-incBody`).classList.remove('edit-mode');
     document.getElementById(`${section}-incEditBtn`).style.display='inline-flex';
     document.getElementById(`${section}-incSaveBtn`).style.display='none';
     document.getElementById(`${section}-incCancelBtn`).style.display='none';
@@ -460,6 +501,7 @@ function renderINCTab(section){
   document.getElementById(`${section}-incCancelBtn`).addEventListener('click',()=>{
     incRows=JSON.parse(JSON.stringify(incRowsSnapshot));
     if(section==='acu') acuEditMode=false; else vposEditMode=false;
+    document.getElementById(`${section}-incBody`).classList.remove('edit-mode');
     document.getElementById(`${section}-incEditBtn`).style.display='inline-flex';
     document.getElementById(`${section}-incSaveBtn`).style.display='none';
     document.getElementById(`${section}-incCancelBtn`).style.display='none';
@@ -525,11 +567,16 @@ function renderINCRows(section){
       if(editMode&&col==='Tracking'){
         const listId='tk-list-'+idx;
         const opts=trackingCodes.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+' - '+esc((trackingMap[c]&&trackingMap[c].category)||'')+'</option>';}).join('');
-        return '<td><input class="edit-tracking" list="'+listId+'" value="'+esc(r[col]||'')+'" style="min-width:160px;font-size:12px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px" placeholder="Type to search tracking code..."><datalist id="'+listId+'">'+opts+'</datalist></td>';
+        return '<td><input class="edit-tracking" list="'+listId+'" value="'+esc(r[col]||'')+'" style="min-width:120px;font-size:12px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px" placeholder="Type to search tracking code..."><datalist id="'+listId+'">'+opts+'</datalist></td>';
       }
       return '<td>'+esc(r[col]||'')+'</td>';
     });
-    return '<tr data-idx="'+idx+'">'+cells.join('')+'</tr>';
+    const isSelected = selectedIdxs.has(idx);
+    return '<tr data-idx="'+idx+'"'
+      +(isSelected?' class="row-selected"':'')
+      +' onmousedown="handleRowMouseDown(event,'+idx+',\''+section+'\')"'
+      +' onmouseenter="handleRowMouseEnter(event,'+idx+',\''+section+'\')"'
+      +'>'+cells.join('')+'</tr>';
   }).join('')||'<tr><td colspan="'+INC_COLS.length+'" class="empty">No rows match</td></tr>';
 
   document.querySelectorAll('#'+section+'-incHead th').forEach(function(th,i){
@@ -744,7 +791,98 @@ function buildSummaryChart(s){
   });
 }
 
-// ── Tracking Config ───────────────────────────────────────────────────────────
+// ── Multi-select bulk edit ────────────────────────────────────────────────────
+let selectedIdxs = new Set();
+let isDragging = false;
+let dragSection = null;
+
+function clearSelection(){
+  selectedIdxs.clear();
+  document.querySelectorAll('.row-selected').forEach(r=>r.classList.remove('row-selected'));
+  hideBulkBar();
+}
+
+function hideBulkBar(){
+  document.getElementById('bulkBar').classList.remove('visible');
+}
+
+function updateBulkBar(){
+  const bar = document.getElementById('bulkBar');
+  if(selectedIdxs.size > 0){
+    bar.classList.add('visible');
+    document.getElementById('bulkCount').textContent = selectedIdxs.size + ' row'+(selectedIdxs.size>1?'s':'')+' selected';
+  } else {
+    hideBulkBar();
+  }
+}
+
+function toggleRowSelect(idx, tr){
+  if(selectedIdxs.has(idx)){
+    selectedIdxs.delete(idx);
+    tr.classList.remove('row-selected');
+  } else {
+    selectedIdxs.add(idx);
+    tr.classList.add('row-selected');
+  }
+  updateBulkBar();
+}
+
+function addRowSelect(idx, tr){
+  selectedIdxs.add(idx);
+  tr.classList.add('row-selected');
+  updateBulkBar();
+}
+
+function handleRowMouseDown(e, idx, section){
+  const editMode = section==='acu' ? acuEditMode : vposEditMode;
+  if(!editMode) return;
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='OPTION'||e.target.tagName==='BUTTON') return;
+  isDragging = true;
+  dragSection = section;
+  if(!e.ctrlKey && !e.metaKey) clearSelection();
+  toggleRowSelect(idx, e.currentTarget);
+  // NO preventDefault here - it blocks file input
+}
+
+function handleRowMouseEnter(e, idx, section){
+  if(!isDragging || dragSection!==section) return;
+  const editMode = section==='acu' ? acuEditMode : vposEditMode;
+  if(!editMode) return;
+  addRowSelect(idx, e.currentTarget);
+}
+
+document.addEventListener('mouseup', ()=>{ isDragging=false; dragSection=null; });
+
+// Apply bulk changes from the toolbar
+function bulkApply(){
+  const type    = document.getElementById('bulkType').value;
+  const ci      = document.getElementById('bulkCI').value;
+  const tracking= document.getElementById('bulkTracking').value;
+  const parent  = document.getElementById('bulkParent').value;
+
+  selectedIdxs.forEach(idx=>{
+    if(type)     incRows[idx]['Type'] = type;
+    if(ci)       incRows[idx]['Configuration Item'] = ci;
+    if(tracking){
+      incRows[idx]['Tracking'] = tracking;
+      if(trackingMap[tracking]) incRows[idx]['Type'] = trackingMap[tracking].type;
+    }
+    if(parent)   incRows[idx]['Parent Incident'] = parent;
+  });
+
+  const count = selectedIdxs.size;
+  clearSelection();
+  renderINCRows('acu');
+  renderINCRows('vpos');
+  toast(count + ' rows updated');
+}
+
+// Clear selection when clicking outside table and bulk bar
+document.addEventListener('click', e=>{
+  if(!e.target.closest('table')&&!e.target.closest('#bulkBar')){
+    clearSelection();
+  }
+});
 async function syncTrackingMap(){
   try{
     const res=await fetch(`${API}/api/tracking`);
@@ -753,6 +891,7 @@ async function syncTrackingMap(){
     allTrackingRows.forEach(r=>{trackingMap[r.tracking_code]=r;});
     populateRefFilters();
     renderRefTable(getFilteredSortedRef());
+    populateBulkBar();
     if(incRows.length){renderINCRows('acu');renderINCRows('vpos');}
   }catch(e){toast('Failed to sync tracking data',true);}
 }
@@ -837,6 +976,7 @@ async function deleteRefRow(id){
   allTrackingRows=allTrackingRows.filter(r=>r.id!==id);
   Object.keys(trackingMap).forEach(k=>{if(trackingMap[k].id===id) delete trackingMap[k];});
   populateRefFilters(); renderRefTable(getFilteredSortedRef());
+  populateBulkBar();
   if(incRows.length){renderINCRows('acu');renderINCRows('vpos');}
   toast('Deleted');
 }
